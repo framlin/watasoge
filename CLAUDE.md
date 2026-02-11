@@ -50,12 +50,12 @@ Die Datei `data/wavetables_integrated.h` enthält 220 Wavetables im Integrated-W
 
 ## Projektstand
 
-Blinky-Firmware für STM32G431KB implementiert und auf dem NUCLEO-G431KB verifiziert. LD2 (PB8) blinkt mit 2-Sekunden-Zyklus (500 ms an, 1500 ms aus).
+Blinky-Firmware für STM32G431KB implementiert und auf dem NUCLEO-G431KB verifiziert. LD2 (PB8) blinkt mit 4 Hz (Toggle alle 125 ms).
 
 - **Systemtakt:** 170 MHz (HSI 16 MHz → PLL, PLLM=4, PLLN=85, PLLR=2)
 - **Build-System:** CMake 3.22 + Ninja, arm-none-eabi-gcc 10.3
 - **HAL:** STM32Cube_FW_G4_V1.6.1 (via Symlink)
-- **Flash-Nutzung:** 5732 Bytes (4.4%), **RAM:** 1592 Bytes (4.9%)
+- **Flash-Nutzung:** 5760 Bytes (4.4%), **RAM:** 1592 Bytes (4.9%)
 
 ### Build & Flash
 

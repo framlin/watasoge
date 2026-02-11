@@ -12,7 +12,7 @@
 
 ## Aktueller Stand
 
-Blinky-Firmware: LD2 (PB8) blinkt mit 2-Sekunden-Zyklus (500 ms an, 1500 ms aus via HAL_Delay).
+Blinky-Firmware: LD2 (PB8) blinkt mit 4 Hz (Toggle alle 125 ms via HAL_Delay).
 
 ### Firmware-Struktur
 
