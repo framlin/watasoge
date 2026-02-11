@@ -10,6 +10,59 @@
 - **SRAM:** 32 KB (davon 10 KB CCM-RAM)
 - **Audio-DAC:** PCM5102 (extern, via I2S/SAI)
 
+## Aktueller Stand
+
+Blinky-Firmware: LD2 (PB8) blinkt mit 4 Hz (Toggle alle 125 ms via HAL_Delay).
+
+### Firmware-Struktur
+
+```
+stm32g431kb/
+├── CMakeLists.txt                # CMake 3.22, C11, Cortex-M4F Flags
+├── CMakePresets.json             # Debug (-O0 -g3) / Release (-Os), Ninja
+├── cmake/
+│   └── gcc-arm-none-eabi.cmake   # Toolchain-File
+├── STM32G431KBTX_FLASH.ld       # Linker-Script (READONLY entfernt für GCC 10.3)
+├── startup_stm32g431xx.s        # Startup (Kopie aus STM32Cube Repo)
+├── Core/
+│   ├── Inc/
+│   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
+│   │   ├── stm32g4xx_hal_conf.h # Minimale HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI
+│   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
+│   └── Src/
+│       ├── main.c               # SystemClock 170 MHz, GPIO-Init, Toggle-Loop
+│       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick()
+│       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR Clock, UCPD Dead Battery disable
+│       ├── system_stm32g4xx.c   # SystemInit (FPU), SystemCoreClockUpdate
+│       ├── syscalls.c           # Newlib Stubs
+│       └── sysmem.c             # _sbrk
+└── Drivers/                     # Symlink → ~/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers
+```
+
+### Clock-Konfiguration
+
+HSI 16 MHz → PLL (PLLM=4, PLLN=85, PLLR=2) → **170 MHz SYSCLK**. Voltage Scale 1 Boost, Flash Latency 4 WS.
+
+### Build & Flash
+
+```bash
+cmake --preset Debug
+cmake --build build/Debug
+openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify reset exit"
+```
+
+### Build-Ergebnis (Debug)
+
+- Flash: 5780 Bytes (4.4% von 128 KB)
+- RAM: 1592 Bytes (4.9% von 32 KB)
+
+### Abhängigkeiten
+
+- **Toolchain:** arm-none-eabi-gcc 10.3 (Homebrew)
+- **HAL:** STM32Cube_FW_G4_V1.6.1 (`~/STM32Cube/Repository/`)
+- **Build:** CMake 3.22+, Ninja
+- **Flash:** OpenOCD mit ST-LINK V3
+
 ## Synthesizer-Architektur
 
 Wavetable-basierter Klangerzeuger mit Integrated Wavetable Synthesis (Franck & Välimäki, DAFx-12), wie in Mutable Instruments Plaits verwendet.

@@ -1,0 +1,30 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 22,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "Debug",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/Debug",
+            "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_FLAGS_DEBUG": "-O0 -g3"
+            }
+        },
+        {
+            "name": "Release",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/Release",
+            "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_FLAGS_RELEASE": "-Os"
+            }
+        }
+    ]
+}
