@@ -12,7 +12,7 @@
 
 ## Aktueller Stand
 
-440-Hz-Sinuswelle über SAI1/I2S an PCM5102-DAC. LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
+440-Hz-Sinuswelle über SAI1/I2S an PCM5102-DAC. LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen. Firmware modularisiert in synthesis (Signalerzeugung), output (Audio-Ausgabe) und main (Orchestrierung).
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
@@ -34,10 +34,14 @@ stm32g431kb/
 ├── Core/
 │   ├── Inc/
 │   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
+│   │   ├── synthesis.h          # synthesis_init(), synthesis_fill_buffer()
+│   │   ├── output.h             # output_init()
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
 │   └── Src/
-│       ├── main.c               # SystemClock, GPIO, SAI1-Init, Sine-DMA, LED-Toggle
+│       ├── main.c               # Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
+│       ├── synthesis.c          # Signalerzeugung: Sinustabelle, Phase-Accumulator, fill_buffer
+│       ├── output.c             # Audio-Ausgabe: SAI/DMA-Handles, Buffer, Init, Callbacks
 │       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick(), DMA1_Ch1 → HAL_DMA_IRQHandler()
 │       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR, SAI1 MspInit (GPIO AF14, DMA1 Circular)
 │       ├── system_stm32g4xx.c   # SystemInit (FPU), SystemCoreClockUpdate
@@ -45,6 +49,20 @@ stm32g431kb/
 │       └── sysmem.c             # _sbrk
 └── Drivers/                     # Symlink → ~/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers
 ```
+
+### Modul-Architektur
+
+```
+main.c  ──init──→  synthesis.c    (Signalerzeugung)
+   │                    ↑
+   └───init──→  output.c          (Audio-Ausgabe)
+                    │
+                    └──ruft auf──→  synthesis_fill_buffer()
+```
+
+- **synthesis**: Erzeugt Audio-Samples. Sinustabelle (256 × int16_t), Phase-Accumulator (16.16 Fixed-Point), füllt Stereo-Buffer (L=R).
+- **output**: Kapselt SAI1/I2S/DMA. SAI- und DMA-Handles (global, extern-referenziert von hal_msp.c und it.c), DMA-Callbacks rufen `synthesis_fill_buffer()`.
+- **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → synthesis → output) und LED-Loop.
 
 ### Clock-Konfiguration
 
@@ -60,7 +78,7 @@ openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify rese
 
 ### Build-Ergebnis (Debug)
 
-- Flash: 12.288 Bytes (9.4% von 128 KB)
+- Flash: 12.328 Bytes (9.4% von 128 KB)
 - RAM: 2.352 Bytes (7.2% von 32 KB)
 
 ### Abhängigkeiten

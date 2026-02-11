@@ -25,8 +25,8 @@ watasoge/
         ├── STM32G431KBTX_FLASH.ld # Linker-Script
         ├── startup_stm32g431xx.s  # Startup (Kopie aus STM32Cube Repo)
         ├── Core/
-        │   ├── Inc/               # main.h, hal_conf.h, it.h
-        │   └── Src/               # main.c, it.c, hal_msp.c, system, syscalls, sysmem
+        │   ├── Inc/               # main.h, synthesis.h, output.h, hal_conf.h, it.h
+        │   └── Src/               # main.c, synthesis.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
         └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
 ```
 
@@ -52,6 +52,12 @@ Die Datei `data/wavetables_integrated.h` enthält 220 Wavetables im Integrated-W
 
 440-Hz-Sinuswelle über SAI1/I2S an PCM5102-DAC implementiert und auf dem NUCLEO-G431KB verifiziert. LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
 
+Firmware modularisiert in drei Module:
+- **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Sinustabelle, Phase-Accumulator, `synthesis_fill_buffer()`
+- **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, Buffer, DMA-Callbacks → ruft `synthesis_fill_buffer()`
+- **main** (`main.c`) — Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
+
+Technische Details:
 - **Audio-Ausgabe:** SAI1 Block A, I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz
 - **Sinuserzeugung:** 256-Eintrag-Lookup-Tabelle, Phase-Accumulator (16.16 Fixed-Point)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks für lückenloses Streaming
@@ -59,7 +65,7 @@ Die Datei `data/wavetables_integrated.h` enthält 220 Wavetables im Integrated-W
 - **Systemtakt:** 170 MHz (HSI 16 MHz → PLL, PLLM=4, PLLN=85, PLLR=2)
 - **Build-System:** CMake 3.22 + Ninja, arm-none-eabi-gcc 10.3
 - **HAL:** STM32Cube_FW_G4_V1.6.1 (via Symlink)
-- **Flash-Nutzung:** 12.288 Bytes (9.4%), **RAM:** 2.352 Bytes (7.2%)
+- **Flash-Nutzung:** 12.328 Bytes (9.4%), **RAM:** 2.352 Bytes (7.2%)
 
 ### Build & Flash
 

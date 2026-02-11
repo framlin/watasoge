@@ -22,6 +22,8 @@ add_compile_definitions(
 # --- Sources ---
 set(SOURCES
     Core/Src/main.c
+    Core/Src/synthesis.c
+    Core/Src/output.c
     Core/Src/stm32g4xx_hal_msp.c
     Core/Src/stm32g4xx_it.c
     Core/Src/system_stm32g4xx.c
