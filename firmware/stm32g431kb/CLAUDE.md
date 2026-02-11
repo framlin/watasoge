@@ -12,7 +12,14 @@
 
 ## Aktueller Stand
 
-Blinky-Firmware: LD2 (PB8) blinkt mit 4 Hz (Toggle alle 125 ms via HAL_Delay).
+440-Hz-Sinuswelle über SAI1/I2S an PCM5102-DAC. LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
+
+- **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
+- **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
+- **Audio-Buffer:** 128 Stereo-Frames (256 int16_t)
+- **Sinuserzeugung:** 256-Eintrag-Lookup-Tabelle (±24000, ~75% Full-Scale), Phase-Accumulator 16.16 Fixed-Point
+- **Pins:** PA8 (SAI1_SCK_A, AF14), PA9 (SAI1_FS_A, AF14), PA10 (SAI1_SD_A, AF14)
+- **MCK:** Deaktiviert (PCM5102 erzeugt MCLK intern)
 
 ### Firmware-Struktur
 
@@ -27,12 +34,12 @@ stm32g431kb/
 ├── Core/
 │   ├── Inc/
 │   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
-│   │   ├── stm32g4xx_hal_conf.h # Minimale HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI
+│   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
 │   └── Src/
-│       ├── main.c               # SystemClock 170 MHz, GPIO-Init, Toggle-Loop
-│       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick()
-│       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR Clock, UCPD Dead Battery disable
+│       ├── main.c               # SystemClock, GPIO, SAI1-Init, Sine-DMA, LED-Toggle
+│       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick(), DMA1_Ch1 → HAL_DMA_IRQHandler()
+│       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR, SAI1 MspInit (GPIO AF14, DMA1 Circular)
 │       ├── system_stm32g4xx.c   # SystemInit (FPU), SystemCoreClockUpdate
 │       ├── syscalls.c           # Newlib Stubs
 │       └── sysmem.c             # _sbrk
@@ -53,8 +60,8 @@ openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify rese
 
 ### Build-Ergebnis (Debug)
 
-- Flash: 5780 Bytes (4.4% von 128 KB)
-- RAM: 1592 Bytes (4.9% von 32 KB)
+- Flash: 12.288 Bytes (9.4% von 128 KB)
+- RAM: 2.352 Bytes (7.2% von 32 KB)
 
 ### Abhängigkeiten
 
