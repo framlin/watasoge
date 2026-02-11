@@ -66,6 +66,16 @@ cmake --build build/Debug
 openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify reset exit"
 ```
 
+## Skills
+
+Projektspezifische Skills unter `.claude/skills/`:
+
+| Skill | Beschreibung |
+|-------|-------------|
+| **ucconfig** | STM32G431KB Build-Konfiguration: HAL-Module, CMakeLists.txt, Linker-Script, Toolchain |
+| **ucbuild** | Firmware bauen mit CMake + Ninja + arm-none-eabi-gcc |
+| **ucflash** | Firmware flashen via OpenOCD auf NUCLEO-G431KB |
+
 ## Externe Referenzen
 
 | Ressource | Pfad | Inhalt |
