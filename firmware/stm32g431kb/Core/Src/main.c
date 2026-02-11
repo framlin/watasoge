@@ -11,8 +11,10 @@ int main(void)
 
     while (1)
     {
-        HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
-        HAL_Delay(125);
+        HAL_GPIO_WritePin(LED2_GPIO_PORT, LED2_PIN, GPIO_PIN_SET);
+        HAL_Delay(500);
+        HAL_GPIO_WritePin(LED2_GPIO_PORT, LED2_PIN, GPIO_PIN_RESET);
+        HAL_Delay(1500);
     }
 }
 
