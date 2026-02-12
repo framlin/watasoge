@@ -13,16 +13,13 @@ int main(void)
     GPIO_Init();
     synthesis_init();
     output_init();
-    player_init();
+    player_init(GROUP_ADDITIVE);
 
-    uint32_t led_tick = HAL_GetTick();
     while (1)
     {
         player_update();
-        if (HAL_GetTick() - led_tick >= 125) {
-            led_tick = HAL_GetTick();
+        if (player_beat_pending())
             HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
-        }
     }
 }
 
