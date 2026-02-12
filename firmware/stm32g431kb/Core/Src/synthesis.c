@@ -1,58 +1,70 @@
 #include "synthesis.h"
+#include "../../../../data/wavetables_integrated.h"
+#include <math.h>
 
-/* --- Sine lookup table: 256 entries, ~75% full-scale --- */
-static const int16_t sine_table[256] = {
-        0,    589,   1178,   1766,   2352,   2938,   3522,   4103,
-     4682,   5258,   5832,   6401,   6967,   7528,   8085,   8637,
-     9184,   9726,  10261,  10791,  11314,  11830,  12338,  12840,
-    13334,  13819,  14297,  14766,  15225,  15676,  16117,  16549,
-    16971,  17382,  17783,  18173,  18552,  18920,  19277,  19622,
-    19955,  20276,  20585,  20882,  21166,  21437,  21696,  21941,
-    22173,  22392,  22597,  22789,  22967,  23131,  23281,  23417,
-    23539,  23647,  23740,  23820,  23884,  23935,  23971,  23993,
-    24000,  23993,  23971,  23935,  23884,  23820,  23740,  23647,
-    23539,  23417,  23281,  23131,  22967,  22789,  22597,  22392,
-    22173,  21941,  21696,  21437,  21166,  20882,  20585,  20276,
-    19955,  19622,  19277,  18920,  18552,  18173,  17783,  17382,
-    16971,  16549,  16117,  15676,  15225,  14766,  14297,  13819,
-    13334,  12840,  12338,  11830,  11314,  10791,  10261,   9726,
-     9184,   8637,   8085,   7528,   6967,   6401,   5832,   5258,
-     4682,   4103,   3522,   2938,   2352,   1766,   1178,    589,
-        0,   -589,  -1178,  -1766,  -2352,  -2938,  -3522,  -4103,
-    -4682,  -5258,  -5832,  -6401,  -6967,  -7528,  -8085,  -8637,
-    -9184,  -9726, -10261, -10791, -11314, -11830, -12338, -12840,
-   -13334, -13819, -14297, -14766, -15225, -15676, -16117, -16549,
-   -16971, -17382, -17783, -18173, -18552, -18920, -19277, -19622,
-   -19955, -20276, -20585, -20882, -21166, -21437, -21696, -21941,
-   -22173, -22392, -22597, -22789, -22967, -23131, -23281, -23417,
-   -23539, -23647, -23740, -23820, -23884, -23935, -23971, -23993,
-   -24000, -23993, -23971, -23935, -23884, -23820, -23740, -23647,
-   -23539, -23417, -23281, -23131, -22967, -22789, -22597, -22392,
-   -22173, -21941, -21696, -21437, -21166, -20882, -20585, -20276,
-   -19955, -19622, -19277, -18920, -18552, -18173, -17783, -17382,
-   -16971, -16549, -16117, -15676, -15225, -14766, -14297, -13819,
-   -13334, -12840, -12338, -11830, -11314, -10791, -10261,  -9726,
-    -9184,  -8637,  -8085,  -7528,  -6967,  -6401,  -5832,  -5258,
-    -4682,  -4103,  -3522,  -2938,  -2352,  -1766,  -1178,   -589
-};
+#define SAMPLE_RATE  44100.0f
+#define OUTPUT_GAIN  24000.0f
 
-/* --- Phase accumulator (16.16 fixed-point) --- */
-static uint32_t phase_acc = 0;
-/* 440 Hz at ~44.27 kHz: (440 * 256 * 65536) / 44100 ≈ 167607 */
-static const uint32_t phase_inc = 167607;
+/* --- Module state --- */
+static iwt_differentiator_t diff;
+static float phase;
+static float f0;
+static float scale;
+static float coeff;
+static const int16_t *wave;
 
 void synthesis_init(void)
 {
-    phase_acc = 0;
+    wave = &iwt_waves[0];
+    synthesis_set_frequency(440.0f);
+    diff.previous = (float)wave[0];
+    diff.lp = 0.0f;
+    phase = 0.0f;
+}
+
+void synthesis_set_frequency(float freq_hz)
+{
+    f0 = freq_hz / SAMPLE_RATE;
+    scale = 1.0f / (f0 * 131072.0f);
+    coeff = fminf(128.0f * f0, 1.0f);
+}
+
+void synthesis_set_wave(uint16_t wave_index)
+{
+    if (wave_index >= IWT_WAVE_COUNT)
+        return;
+    wave = &iwt_waves[wave_index * IWT_WAVE_STRIDE];
+    diff.previous = (float)wave[0];
+    diff.lp = 0.0f;
 }
 
 void synthesis_fill_buffer(int16_t *buf, uint16_t num_samples)
 {
     for (uint16_t i = 0; i < num_samples; i += 2)
     {
-        int16_t sample = sine_table[(phase_acc >> 16) & 0xFF];
+        /* Phase → table index + fraction */
+        float p = phase * 128.0f;
+        int32_t p_integral = (int32_t)p;
+        float p_fractional = p - (float)p_integral;
+
+        /* Hermite interpolation over integrated wavetable */
+        float s = iwt_interpolate_hermite(wave, p_integral, p_fractional);
+
+        /* Differentiation + one-pole LP */
+        float out = iwt_diff_process(&diff, coeff, s);
+
+        /* Scale and convert to int16 */
+        float sample_f = out * scale * OUTPUT_GAIN;
+        if (sample_f > 32767.0f) sample_f = 32767.0f;
+        if (sample_f < -32768.0f) sample_f = -32768.0f;
+        int16_t sample = (int16_t)sample_f;
+
         buf[i]     = sample;  /* L */
         buf[i + 1] = sample;  /* R */
-        phase_acc += phase_inc;
+
+        /* Advance phase */
+        phase += f0;
+        if (phase >= 1.0f)
+            phase -= 1.0f;
     }
 }

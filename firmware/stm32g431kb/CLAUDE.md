@@ -12,12 +12,12 @@
 
 ## Aktueller Stand
 
-440-Hz-Sinuswelle über SAI1/I2S an PCM5102-DAC. LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen. Firmware modularisiert in synthesis (Signalerzeugung), output (Audio-Ausgabe) und main (Orchestrierung).
+Integrated Wavetable Playback nach MI-Plaits-Vorbild über SAI1/I2S an PCM5102-DAC. 220 Wavetables aus `data/wavetables_integrated.h` verfügbar. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen. Firmware modularisiert in synthesis (Signalerzeugung), output (Audio-Ausgabe) und main (Orchestrierung).
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
 - **Audio-Buffer:** 128 Stereo-Frames (256 int16_t)
-- **Sinuserzeugung:** 256-Eintrag-Lookup-Tabelle (±24000, ~75% Full-Scale), Phase-Accumulator 16.16 Fixed-Point
+- **Wavetable-Playback:** Float-Phase-Accumulator [0,1), Hermite-4-Punkt-Interpolation über integrierte Wavetables, Differenzierung + One-Pole-LP (adaptives Anti-Aliasing), frequenzabhängige Skalierung, Output-Gain ±24000 (~75% Full-Scale)
 - **Pins:** PA8 (SAI1_SCK_A, AF14), PA9 (SAI1_FS_A, AF14), PA10 (SAI1_SD_A, AF14)
 - **MCK:** Deaktiviert (PCM5102 erzeugt MCLK intern)
 
@@ -34,13 +34,13 @@ stm32g431kb/
 ├── Core/
 │   ├── Inc/
 │   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
-│   │   ├── synthesis.h          # synthesis_init(), synthesis_fill_buffer()
+│   │   ├── synthesis.h          # synthesis_init(), synthesis_fill_buffer(), set_frequency(), set_wave()
 │   │   ├── output.h             # output_init()
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
 │   └── Src/
 │       ├── main.c               # Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
-│       ├── synthesis.c          # Signalerzeugung: Sinustabelle, Phase-Accumulator, fill_buffer
+│       ├── synthesis.c          # Signalerzeugung: Integrated Wavetable Playback (Hermite, Diff, LP)
 │       ├── output.c             # Audio-Ausgabe: SAI/DMA-Handles, Buffer, Init, Callbacks
 │       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick(), DMA1_Ch1 → HAL_DMA_IRQHandler()
 │       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR, SAI1 MspInit (GPIO AF14, DMA1 Circular)
@@ -60,7 +60,7 @@ main.c  ──init──→  synthesis.c    (Signalerzeugung)
                     └──ruft auf──→  synthesis_fill_buffer()
 ```
 
-- **synthesis**: Erzeugt Audio-Samples. Sinustabelle (256 × int16_t), Phase-Accumulator (16.16 Fixed-Point), füllt Stereo-Buffer (L=R).
+- **synthesis**: Erzeugt Audio-Samples. Integrated Wavetable Playback (220 Waves aus Flash), Float-Phase-Accumulator, Hermite-Interpolation, Differenzierung + One-Pole-LP, frequenzabhängige Skalierung, füllt Stereo-Buffer (L=R). API: `synthesis_set_frequency()`, `synthesis_set_wave()`.
 - **output**: Kapselt SAI1/I2S/DMA. SAI- und DMA-Handles (global, extern-referenziert von hal_msp.c und it.c), DMA-Callbacks rufen `synthesis_fill_buffer()`.
 - **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → synthesis → output) und LED-Loop.
 
@@ -78,8 +78,8 @@ openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify rese
 
 ### Build-Ergebnis (Debug)
 
-- Flash: 12.328 Bytes (9.4% von 128 KB)
-- RAM: 2.352 Bytes (7.2% von 32 KB)
+- Flash: 70.832 Bytes (54.1% von 128 KB) — davon ~58 KB Wavetable-Daten
+- RAM: 2.376 Bytes (7.3% von 32 KB)
 
 ### Abhängigkeiten
 
@@ -145,18 +145,22 @@ Obsidian-Zettelkasten mit Topic-Struktur für MCU-Wissen. Relevante Topics:
 | `mi-reference/plaits_wavetable_engine.cc` | Plaits — 8x8x3 Wave-Terrain, trilineare Interpolation |
 | `generate_integrated_wavetables.py` | Generator-Script für die integrierten Wavetables |
 
-## Playback-Algorithmus (Kurzreferenz)
+## Playback-Algorithmus (implementiert in `synthesis.c`)
+
+Pipeline pro Sample: Phase-Accumulator → Hermite-Interpolation → Differenzierung → One-Pole-LP → Skalierung → int16
 
 ```c
-// Initialisierung bei Wave-Wechsel:
-diff.previous = (float)table[0];  // Startup-Transient vermeiden
+// Initialisierung bei Wave-Wechsel (Startup-Transient-Fix):
+diff.previous = (float)wave[0];
 diff.lp = 0.0f;
 
+// Frequenzabhängige Parameter:
+f0 = freq / 44100.0f;
+coeff = fminf(128.0f * f0, 1.0f);
+scale = 1.0f / (f0 * 131072.0f);
+
 // Pro Sample:
-float f0 = freq / SAMPLERATE;
-float coeff = fminf(WAVETABLE_SIZE * f0, 1.0f);
-float scale = 1.0f / (f0 * 131072.0f);
-// Interpolation → Differenzierung → Tiefpass → Skalierung
+// phase [0,1) → Hermite über 4 Tabellenwerte → Differenzierung → LP → scale × 24000 → int16
 ```
 
 Siehe `~/tinker/audio-samples/INTEGRATED_WAVETABLE_PLAYBACK.md` für Details zu bekannten Fallstricken.

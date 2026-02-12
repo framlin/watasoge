@@ -50,22 +50,22 @@ Die Datei `data/wavetables_integrated.h` enthält 220 Wavetables im Integrated-W
 
 ## Projektstand
 
-440-Hz-Sinuswelle über SAI1/I2S an PCM5102-DAC implementiert und auf dem NUCLEO-G431KB verifiziert. LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
+Integrated Wavetable Playback nach Mutable Instruments Plaits implementiert und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables aus `data/wavetables_integrated.h` werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
 
 Firmware modularisiert in drei Module:
-- **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Sinustabelle, Phase-Accumulator, `synthesis_fill_buffer()`
+- **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), `synthesis_fill_buffer()`, `synthesis_set_frequency()`, `synthesis_set_wave()`
 - **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, Buffer, DMA-Callbacks → ruft `synthesis_fill_buffer()`
 - **main** (`main.c`) — Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
 
 Technische Details:
 - **Audio-Ausgabe:** SAI1 Block A, I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz
-- **Sinuserzeugung:** 256-Eintrag-Lookup-Tabelle, Phase-Accumulator (16.16 Fixed-Point)
+- **Wavetable-Playback:** Float-Phase-Accumulator [0,1), Hermite-4-Punkt-Interpolation, Differenzierung + One-Pole-LP (Anti-Aliasing), frequenzabhängige Skalierung
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks für lückenloses Streaming
 - **Pins:** PA8 (SCK), PA9 (FS/LRCLK), PA10 (SD/DATA)
 - **Systemtakt:** 170 MHz (HSI 16 MHz → PLL, PLLM=4, PLLN=85, PLLR=2)
 - **Build-System:** CMake 3.22 + Ninja, arm-none-eabi-gcc 10.3
 - **HAL:** STM32Cube_FW_G4_V1.6.1 (via Symlink)
-- **Flash-Nutzung:** 12.328 Bytes (9.4%), **RAM:** 2.352 Bytes (7.2%)
+- **Flash-Nutzung:** 70.832 Bytes (54.1%), **RAM:** 2.376 Bytes (7.3%)
 
 ### Build & Flash
 
