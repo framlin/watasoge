@@ -12,7 +12,7 @@
 
 ## Aktueller Stand
 
-Integrated Wavetable Playback nach MI-Plaits-Vorbild über SAI1/I2S an PCM5102-DAC. 220 Wavetables aus `data/wavetables_integrated.h` verfügbar. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen. Firmware modularisiert in synthesis (Signalerzeugung), output (Audio-Ausgabe) und main (Orchestrierung).
+Integrated Wavetable Playback nach MI-Plaits-Vorbild über SAI1/I2S an PCM5102-DAC. 220 Wavetables aus `Core/Inc/wavetables_integrated.h` verfügbar. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen. Firmware modularisiert in synthesis (Signalerzeugung), output (Audio-Ausgabe) und main (Orchestrierung).
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
@@ -37,6 +37,7 @@ stm32g431kb/
 │   │   ├── synthesis.h          # synthesis_init(), synthesis_fill_buffer(), set_frequency(), set_wave()
 │   │   ├── output.h             # output_init()
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
+│   │   ├── wavetables_integrated.h # 220 integrierte Wavetables (MI-Plaits-Stil, ~58 KB)
 │   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
 │   └── Src/
 │       ├── main.c               # Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
@@ -98,7 +99,7 @@ Wavetable-basierter Klangerzeuger mit Integrated Wavetable Synthesis (Franck & V
 - Integrierte Wellenformen (kumulative Summe), Differenzierung bei Wiedergabe
 - Anti-Aliasing durch Differenzierung + One-pole Tiefpass
 - 220 Waves in ~60.1 KB Flash (56.7 KB Wavedaten + ~3.4 KB Metadaten)
-- Header-Datei: `../../data/wavetables_integrated.h`
+- Header-Datei: `Core/Inc/wavetables_integrated.h`
 
 ### Speicherbudget
 

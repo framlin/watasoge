@@ -9,8 +9,6 @@ Wavetable-basierter Klangerzeuger (Synthesizer) für Eurorack. Entwicklungsplatt
 ```
 watasoge/
 ├── CLAUDE.md                      # Diese Datei
-├── data/
-│   └── wavetables_integrated.h    # 220 integrierte Wavetables (MI-Plaits-Stil, ~60 KB)
 └── firmware/
     ├── rp2040/                    # Firmware für Raspberry Pi Pico
     │   ├── CLAUDE.md
@@ -25,7 +23,7 @@ watasoge/
         ├── STM32G431KBTX_FLASH.ld # Linker-Script
         ├── startup_stm32g431xx.s  # Startup (Kopie aus STM32Cube Repo)
         ├── Core/
-        │   ├── Inc/               # main.h, synthesis.h, output.h, hal_conf.h, it.h
+        │   ├── Inc/               # main.h, synthesis.h, output.h, hal_conf.h, it.h, wavetables_integrated.h
         │   └── Src/               # main.c, synthesis.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
         └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
 ```
@@ -41,7 +39,7 @@ Gemeinsam: PCM5102 Audio-DAC, 16-Bit, 44.1 kHz.
 
 ## Wavetable-Daten
 
-Die Datei `data/wavetables_integrated.h` enthält 220 Wavetables im Integrated-Wavetable-Synthesis-Format (Franck & Välimäki, DAFx-12 / Mutable Instruments Plaits):
+Die Datei `firmware/stm32g431kb/Core/Inc/wavetables_integrated.h` enthält 220 Wavetables im Integrated-Wavetable-Synthesis-Format (Franck & Välimäki, DAFx-12 / Mutable Instruments Plaits):
 
 - **Format:** 128 Samples + 4 Guard, int16_t, integriert (kumulative Summe)
 - **Bank A:** 64 Waves — additive Synthese (Sinus, Comb, Quadra, Tri-Stack, Drawbars, Formant, Digital-Formant, Pulse)
@@ -50,7 +48,7 @@ Die Datei `data/wavetables_integrated.h` enthält 220 Wavetables im Integrated-W
 
 ## Projektstand
 
-Integrated Wavetable Playback nach Mutable Instruments Plaits implementiert und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables aus `data/wavetables_integrated.h` werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
+Integrated Wavetable Playback nach Mutable Instruments Plaits implementiert und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables aus `Core/Inc/wavetables_integrated.h` werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
 
 Firmware modularisiert in drei Module:
 - **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), `synthesis_fill_buffer()`, `synthesis_set_frequency()`, `synthesis_set_wave()`

@@ -1,5 +1,5 @@
 #include "synthesis.h"
-#include "../../../../data/wavetables_integrated.h"
+#include "wavetables_integrated.h"
 #include <math.h>
 
 #define SAMPLE_RATE  44100.0f
