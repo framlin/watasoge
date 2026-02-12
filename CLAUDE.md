@@ -23,8 +23,8 @@ watasoge/
         ├── STM32G431KBTX_FLASH.ld # Linker-Script
         ├── startup_stm32g431xx.s  # Startup (Kopie aus STM32Cube Repo)
         ├── Core/
-        │   ├── Inc/               # main.h, synthesis.h, output.h, hal_conf.h, it.h, wavetables_integrated.h
-        │   └── Src/               # main.c, synthesis.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
+        │   ├── Inc/               # main.h, synthesis.h, player.h, output.h, hal_conf.h, it.h, wavetables_integrated.h
+        │   └── Src/               # main.c, synthesis.c, player.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
         └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
 ```
 
@@ -48,22 +48,29 @@ Die Datei `firmware/stm32g431kb/Core/Inc/wavetables_integrated.h` enthält 220 W
 
 ## Projektstand
 
-Integrated Wavetable Playback nach Mutable Instruments Plaits implementiert und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables aus `Core/Inc/wavetables_integrated.h` werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen.
+Integrated Wavetable Playback nach Mutable Instruments Plaits implementiert und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables aus `Core/Inc/wavetables_integrated.h` werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung. LED (PB8) blinkt mit 4 Hz als Lebenszeichen.
 
-Firmware modularisiert in drei Module:
-- **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), `synthesis_fill_buffer()`, `synthesis_set_frequency()`, `synthesis_set_wave()`
+Player-Modul spielt alle 220 Waves sequenziell ab:
+- **Melodisch (Waves 0–115):** C-Dur-Tonleiter C1–C2 (8 Noten, je 1000 ms Ton + 250 ms Pause)
+- **Perkussiv (Waves 116–219):** 16 Hits bei 120 BPM auf C2 (375 ms Ton + 125 ms Pause)
+- Nach Wave 219 beginnt der Zyklus von vorn
+
+Firmware modularisiert in vier Module:
+- **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), Mute mit Smoothstep-Gain-Envelope, `synthesis_fill_buffer()`, `synthesis_set_frequency()`, `synthesis_set_wave()`, `synthesis_set_mute()`
+- **player** (`player.c/.h`) — Sequenzielles Abspielen aller 220 Waves: Tick-basierte Zustandsmaschine, melodisch/perkussiv-Kategorisierung, `player_init()`, `player_update()`
 - **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, Buffer, DMA-Callbacks → ruft `synthesis_fill_buffer()`
-- **main** (`main.c`) — Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
+- **main** (`main.c`) — Orchestrierung: Clock, GPIO, Init-Reihenfolge, non-blocking Main-Loop (Player + LED)
 
 Technische Details:
 - **Audio-Ausgabe:** SAI1 Block A, I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz
 - **Wavetable-Playback:** Float-Phase-Accumulator [0,1), Hermite-4-Punkt-Interpolation, Differenzierung + One-Pole-LP (Anti-Aliasing), frequenzabhängige Skalierung
+- **Gain-Envelope:** Smoothstep-Fade (256 Samples, ~5,8 ms) für knacksfreie Mute/Unmute-Übergänge. Synthese-Pipeline läuft auch bei Mute weiter, damit der Differentiator bei Frequenzwechseln eingeschwungen ist.
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks für lückenloses Streaming
 - **Pins:** PA8 (SCK), PA9 (FS/LRCLK), PA10 (SD/DATA)
 - **Systemtakt:** 170 MHz (HSI 16 MHz → PLL, PLLM=4, PLLN=85, PLLR=2)
 - **Build-System:** CMake 3.22 + Ninja, arm-none-eabi-gcc 10.3
 - **HAL:** STM32Cube_FW_G4_V1.6.1 (via Symlink)
-- **Flash-Nutzung:** 70.832 Bytes (54.1%), **RAM:** 2.376 Bytes (7.3%)
+- **Flash-Nutzung:** 71.688 Bytes (54.7%), **RAM:** 2.380 Bytes (7.3%)
 
 ### Build & Flash
 

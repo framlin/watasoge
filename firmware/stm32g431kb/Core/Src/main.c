@@ -1,6 +1,7 @@
 #include "main.h"
 #include "synthesis.h"
 #include "output.h"
+#include "player.h"
 
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
@@ -12,11 +13,16 @@ int main(void)
     GPIO_Init();
     synthesis_init();
     output_init();
+    player_init();
 
+    uint32_t led_tick = HAL_GetTick();
     while (1)
     {
-        HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
-        HAL_Delay(125);
+        player_update();
+        if (HAL_GetTick() - led_tick >= 125) {
+            led_tick = HAL_GetTick();
+            HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
+        }
     }
 }
 

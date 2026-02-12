@@ -12,12 +12,13 @@
 
 ## Aktueller Stand
 
-Integrated Wavetable Playback nach MI-Plaits-Vorbild über SAI1/I2S an PCM5102-DAC. 220 Wavetables aus `Core/Inc/wavetables_integrated.h` verfügbar. Default: 440 Hz, Wave 0 (`a_sine_00`). LED (PB8) blinkt weiterhin mit 4 Hz als Lebenszeichen. Firmware modularisiert in synthesis (Signalerzeugung), output (Audio-Ausgabe) und main (Orchestrierung).
+Integrated Wavetable Playback nach MI-Plaits-Vorbild über SAI1/I2S an PCM5102-DAC. 220 Wavetables aus `Core/Inc/wavetables_integrated.h` verfügbar. Player-Modul spielt alle 220 Waves sequenziell ab: melodische Waves (0–115) mit C-Dur-Tonleiter C1–C2, perkussive Waves (116–219) mit 16-Hit-Pattern bei 120 BPM. LED (PB8) blinkt mit 4 Hz als Lebenszeichen.
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
 - **Audio-Buffer:** 128 Stereo-Frames (256 int16_t)
 - **Wavetable-Playback:** Float-Phase-Accumulator [0,1), Hermite-4-Punkt-Interpolation über integrierte Wavetables, Differenzierung + One-Pole-LP (adaptives Anti-Aliasing), frequenzabhängige Skalierung, Output-Gain ±24000 (~75% Full-Scale)
+- **Gain-Envelope:** Smoothstep-Fade (256 Samples, ~5,8 ms) für knacksfreie Mute/Unmute-Übergänge. Pipeline läuft auch bei Mute weiter (Differentiator bleibt eingeschwungen).
 - **Pins:** PA8 (SAI1_SCK_A, AF14), PA9 (SAI1_FS_A, AF14), PA10 (SAI1_SD_A, AF14)
 - **MCK:** Deaktiviert (PCM5102 erzeugt MCLK intern)
 
@@ -34,14 +35,16 @@ stm32g431kb/
 ├── Core/
 │   ├── Inc/
 │   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
-│   │   ├── synthesis.h          # synthesis_init(), synthesis_fill_buffer(), set_frequency(), set_wave()
+│   │   ├── synthesis.h          # synthesis_init(), fill_buffer(), set_frequency(), set_wave(), set_mute()
+│   │   ├── player.h             # player_init(), player_update()
 │   │   ├── output.h             # output_init()
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   ├── wavetables_integrated.h # 220 integrierte Wavetables (MI-Plaits-Stil, ~58 KB)
 │   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
 │   └── Src/
-│       ├── main.c               # Orchestrierung: Clock, GPIO, Init-Reihenfolge, LED-Loop
-│       ├── synthesis.c          # Signalerzeugung: Integrated Wavetable Playback (Hermite, Diff, LP)
+│       ├── main.c               # Orchestrierung: Clock, GPIO, Init, non-blocking Loop (Player + LED)
+│       ├── synthesis.c          # Signalerzeugung: IWT Playback (Hermite, Diff, LP), Smoothstep-Mute
+│       ├── player.c             # Sequenzielles Abspielen aller 220 Waves (melodisch/perkussiv)
 │       ├── output.c             # Audio-Ausgabe: SAI/DMA-Handles, Buffer, Init, Callbacks
 │       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick(), DMA1_Ch1 → HAL_DMA_IRQHandler()
 │       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR, SAI1 MspInit (GPIO AF14, DMA1 Circular)
@@ -56,14 +59,19 @@ stm32g431kb/
 ```
 main.c  ──init──→  synthesis.c    (Signalerzeugung)
    │                    ↑
-   └───init──→  output.c          (Audio-Ausgabe)
-                    │
-                    └──ruft auf──→  synthesis_fill_buffer()
+   ├───init──→  output.c          (Audio-Ausgabe)
+   │                │
+   │                └──ruft auf──→  synthesis_fill_buffer()
+   │
+   └───init+loop──→  player.c     (Wave-Sequencer)
+                        │
+                        └──steuert──→  synthesis_set_wave/frequency/mute()
 ```
 
-- **synthesis**: Erzeugt Audio-Samples. Integrated Wavetable Playback (220 Waves aus Flash), Float-Phase-Accumulator, Hermite-Interpolation, Differenzierung + One-Pole-LP, frequenzabhängige Skalierung, füllt Stereo-Buffer (L=R). API: `synthesis_set_frequency()`, `synthesis_set_wave()`.
+- **synthesis**: Erzeugt Audio-Samples. Integrated Wavetable Playback (220 Waves aus Flash), Float-Phase-Accumulator, Hermite-Interpolation, Differenzierung + One-Pole-LP, frequenzabhängige Skalierung, Smoothstep-Gain-Envelope für knacksfreies Mute/Unmute, füllt Stereo-Buffer (L=R). API: `synthesis_set_frequency()`, `synthesis_set_wave()`, `synthesis_set_mute()`.
+- **player**: Tick-basierte Zustandsmaschine, spielt alle 220 Waves sequenziell ab. Melodische Waves (0–115) mit C-Dur-Tonleiter C1–C2, perkussive Waves (116–219) mit 16-Hit-Pattern bei 120 BPM. Steuert synthesis über `set_wave()`, `set_frequency()`, `set_mute()`. API: `player_init()`, `player_update()`.
 - **output**: Kapselt SAI1/I2S/DMA. SAI- und DMA-Handles (global, extern-referenziert von hal_msp.c und it.c), DMA-Callbacks rufen `synthesis_fill_buffer()`.
-- **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → synthesis → output) und LED-Loop.
+- **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → synthesis → output → player), non-blocking Main-Loop (`player_update()` + LED-Toggle).
 
 ### Clock-Konfiguration
 
@@ -79,8 +87,8 @@ openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify rese
 
 ### Build-Ergebnis (Debug)
 
-- Flash: 70.832 Bytes (54.1% von 128 KB) — davon ~58 KB Wavetable-Daten
-- RAM: 2.376 Bytes (7.3% von 32 KB)
+- Flash: 71.688 Bytes (54.7% von 128 KB) — davon ~58 KB Wavetable-Daten
+- RAM: 2.380 Bytes (7.3% von 32 KB)
 
 ### Abhängigkeiten
 
@@ -148,7 +156,7 @@ Obsidian-Zettelkasten mit Topic-Struktur für MCU-Wissen. Relevante Topics:
 
 ## Playback-Algorithmus (implementiert in `synthesis.c`)
 
-Pipeline pro Sample: Phase-Accumulator → Hermite-Interpolation → Differenzierung → One-Pole-LP → Skalierung → int16
+Pipeline pro Sample: Phase-Accumulator → Hermite-Interpolation → Differenzierung → One-Pole-LP → Skalierung → Gain-Envelope → int16
 
 ```c
 // Initialisierung bei Wave-Wechsel (Startup-Transient-Fix):
@@ -160,8 +168,12 @@ f0 = freq / 44100.0f;
 coeff = fminf(128.0f * f0, 1.0f);
 scale = 1.0f / (f0 * 131072.0f);
 
+// Gain-Envelope (Smoothstep, 256 Samples fade):
+// gain rampt linear 0↔1, dann g = gain² × (3 - 2×gain)
+// Pipeline läuft auch bei mute weiter (Differentiator bleibt eingeschwungen)
+
 // Pro Sample:
-// phase [0,1) → Hermite über 4 Tabellenwerte → Differenzierung → LP → scale × 24000 → int16
+// phase [0,1) → Hermite über 4 Tabellenwerte → Differenzierung → LP → scale × 24000 × g → int16
 ```
 
 Siehe `~/tinker/audio-samples/INTEGRATED_WAVETABLE_PLAYBACK.md` für Details zu bekannten Fallstricken.

@@ -12,6 +12,12 @@ static float f0;
 static float scale;
 static float coeff;
 static const int16_t *wave;
+static uint8_t muted;
+static float gain;
+
+#define FADE_STEP  (1.0f / 256.0f)  /* ~5.8 ms fade at 44.1 kHz */
+
+void synthesis_set_mute(uint8_t mute) { muted = mute; }
 
 void synthesis_init(void)
 {
@@ -20,6 +26,7 @@ void synthesis_init(void)
     diff.previous = (float)wave[0];
     diff.lp = 0.0f;
     phase = 0.0f;
+    gain = 1.0f;
 }
 
 void synthesis_set_frequency(float freq_hz)
@@ -40,8 +47,19 @@ void synthesis_set_wave(uint16_t wave_index)
 
 void synthesis_fill_buffer(int16_t *buf, uint16_t num_samples)
 {
+    float target = muted ? 0.0f : 1.0f;
+
     for (uint16_t i = 0; i < num_samples; i += 2)
     {
+        /* Ramp gain toward target */
+        if (gain < target) {
+            gain += FADE_STEP;
+            if (gain > 1.0f) gain = 1.0f;
+        } else if (gain > target) {
+            gain -= FADE_STEP;
+            if (gain < 0.0f) gain = 0.0f;
+        }
+
         /* Phase → table index + fraction */
         float p = phase * 128.0f;
         int32_t p_integral = (int32_t)p;
@@ -53,8 +71,11 @@ void synthesis_fill_buffer(int16_t *buf, uint16_t num_samples)
         /* Differentiation + one-pole LP */
         float out = iwt_diff_process(&diff, coeff, s);
 
-        /* Scale and convert to int16 */
-        float sample_f = out * scale * OUTPUT_GAIN;
+        /* Smoothstep envelope: zero derivative at endpoints */
+        float g = gain * gain * (3.0f - 2.0f * gain);
+
+        /* Scale, apply gain envelope, convert to int16 */
+        float sample_f = out * scale * OUTPUT_GAIN * g;
         if (sample_f > 32767.0f) sample_f = 32767.0f;
         if (sample_f < -32768.0f) sample_f = -32768.0f;
         int16_t sample = (int16_t)sample_f;

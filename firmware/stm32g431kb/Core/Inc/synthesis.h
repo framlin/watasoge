@@ -7,5 +7,6 @@ void synthesis_init(void);
 void synthesis_fill_buffer(int16_t *buf, uint16_t num_samples);
 void synthesis_set_frequency(float freq_hz);
 void synthesis_set_wave(uint16_t wave_index);
+void synthesis_set_mute(uint8_t mute);
 
 #endif /* SYNTHESIS_H */
