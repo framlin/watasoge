@@ -23,6 +23,7 @@ add_compile_definitions(
 set(SOURCES
     Core/Src/main.c
     Core/Src/synthesis.c
+    Core/Src/karplus.c
     Core/Src/output.c
     Core/Src/player.c
     Core/Src/stm32g4xx_hal_msp.c

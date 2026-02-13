@@ -1,5 +1,6 @@
 #include "main.h"
 #include "synthesis.h"
+#include "karplus.h"
 #include "output.h"
 #include "player.h"
 
@@ -12,8 +13,9 @@ int main(void)
     SystemClock_Config();
     GPIO_Init();
     synthesis_init();
+    karplus_init();
     output_init();
-    player_init(GROUP_ADDITIVE);
+    player_init(GROUP_KS_STRING);
 
     while (1)
     {

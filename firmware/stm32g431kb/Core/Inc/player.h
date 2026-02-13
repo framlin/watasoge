@@ -15,6 +15,12 @@ typedef enum {
     GROUP_CLAPS,
     GROUP_LOFI_SNARES,
     GROUP_LOFI_HIHATS,
+    /* Karplus-Strong groups */
+    GROUP_KS_STRING,
+    GROUP_KS_BRIGHT,
+    GROUP_KS_INHARMONIC,
+    GROUP_KS_SITAR,
+    GROUP_KS_PERCUSSION,
     GROUP_COUNT
 } player_group_t;
 

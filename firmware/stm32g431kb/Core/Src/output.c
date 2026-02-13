@@ -9,6 +9,9 @@ DMA_HandleTypeDef hdma_sai1a;
 /* --- Audio DMA buffer: 128 stereo frames = 256 halfwords --- */
 static int16_t audio_buffer[256];
 
+/* --- Switchable audio source --- */
+static fill_buffer_fn audio_source = synthesis_fill_buffer;
+
 /**
  * SAI1 Block A: I2S Master TX, 16-bit stereo, ~44.1 kHz
  */
@@ -55,14 +58,19 @@ void output_init(void)
     HAL_SAI_Transmit_DMA(&hsai1a, (uint8_t *)audio_buffer, 256);
 }
 
+void output_set_source(fill_buffer_fn fn)
+{
+    audio_source = fn;
+}
+
 void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai)
 {
     (void)hsai;
-    synthesis_fill_buffer(&audio_buffer[0], 128);
+    audio_source(&audio_buffer[0], 128);
 }
 
 void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 {
     (void)hsai;
-    synthesis_fill_buffer(&audio_buffer[128], 128);
+    audio_source(&audio_buffer[128], 128);
 }
