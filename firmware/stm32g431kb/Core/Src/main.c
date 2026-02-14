@@ -14,7 +14,7 @@ int main(void)
     GPIO_Init();
     synthesis_init();
     karplus_init();
-    output_init();
+    output_init(synthesis_fill_buffer);
     player_init(GROUP_KS_KICK);
 
     while (1)

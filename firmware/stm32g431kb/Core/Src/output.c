@@ -1,6 +1,5 @@
 #include "main.h"
 #include "output.h"
-#include "synthesis.h"
 
 /* --- SAI and DMA handles (global: referenced by hal_msp.c and it.c via extern) --- */
 SAI_HandleTypeDef hsai1a;
@@ -10,7 +9,7 @@ DMA_HandleTypeDef hdma_sai1a;
 static int16_t audio_buffer[256];
 
 /* --- Switchable audio source --- */
-static fill_buffer_fn audio_source = synthesis_fill_buffer;
+static fill_buffer_fn audio_source;
 
 /**
  * SAI1 Block A: I2S Master TX, 16-bit stereo, ~44.1 kHz
@@ -52,8 +51,9 @@ static void SAI1_Init(void)
     }
 }
 
-void output_init(void)
+void output_init(fill_buffer_fn default_source)
 {
+    audio_source = default_source;
     SAI1_Init();
     HAL_SAI_Transmit_DMA(&hsai1a, (uint8_t *)audio_buffer, 256);
 }

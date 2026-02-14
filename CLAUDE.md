@@ -23,8 +23,8 @@ watasoge/
         ├── STM32G431KBTX_FLASH.ld # Linker-Script
         ├── startup_stm32g431xx.s  # Startup (Kopie aus STM32Cube Repo)
         ├── Core/
-        │   ├── Inc/               # main.h, synthesis.h, karplus.h, player.h, output.h, hal_conf.h, it.h, wavetables_integrated.h
-        │   └── Src/               # main.c, synthesis.c, karplus.c, player.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
+        │   ├── Inc/               # main.h, synthesis.h, karplus.h, player.h, player_config.h, output.h, audio_config.h, svf.h, delay_line.h, hal_conf.h, it.h, wavetables_integrated.h
+        │   └── Src/               # main.c, synthesis.c, karplus.c, player.c, player_config.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
         └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
 ```
 
@@ -70,12 +70,20 @@ Player-Modul spielt alle Waves sequenziell ab, gruppiert in 21 Instrumentengrupp
 - Audio-Quelle wird automatisch zwischen Wavetable und Karplus-Strong umgeschaltet (`output_set_source()`)
 - LED blinkt synchron zu den Beats
 
-Firmware modularisiert in fünf Module:
+Firmware modularisiert in Applikations- und DSP-Infrastruktur-Module:
+
+Applikationsmodule:
 - **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), Dual-Envelope
-- **karplus** (`karplus.c/.h`) — Karplus-Strong String Synthesis: Delay-Line, ZDF-SVF Loop-Filter, Allpass-Dispersion, Curved Bridge, Noise-Burst-Excitation, Per-Sample-Parameterinterpolation
-- **player** (`player.c/.h`) — Sequenzielles Abspielen: Tick-basierte Zustandsmaschine, 16 Instrumentengruppen (11 Wavetable + 5 KS), automatische Quellenwahl
-- **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, umschaltbarer Funktionspointer (`fill_buffer_fn`) für Quellenwahl
+- **karplus** (`karplus.c/.h`) — Karplus-Strong String Synthesis: nutzt `svf.h` und `delay_line.h` für DSP-Bausteine, Allpass-Dispersion, Curved Bridge, Noise-Burst-Excitation, Per-Sample-Parameterinterpolation
+- **player** (`player.c/.h`) — Sequenzielles Abspielen: Tick-basierte Zustandsmaschine, 21 Instrumentengruppen (11 Wavetable + 10 KS), automatische Quellenwahl
+- **player_config** (`player_config.c/.h`) — Gruppen-Definitionen, KS-Presets, Frequenz-Arrays, Timing-Konstanten (Daten getrennt von Logik)
+- **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, umschaltbarer Funktionspointer (`fill_buffer_fn`) per Dependency Injection
 - **main** (`main.c`) — Orchestrierung: Clock, GPIO, Init-Reihenfolge, non-blocking Main-Loop (Player + beat-synchrone LED)
+
+DSP-Infrastruktur (Inline-Header):
+- **audio_config** (`audio_config.h`) — Gemeinsame Konstanten: `SAMPLE_RATE`, `OUTPUT_GAIN`, `PI_F`
+- **svf** (`svf.h`) — Wiederverwendbarer ZDF State Variable Filter: `svf_state_t`, `svf_coeff_t`, `svf_compute_coeff()`, `svf_process()`
+- **delay_line** (`delay_line.h`) — Wiederverwendbare Delay-Line-Operationen: `dl_write()`, `dl_read_hermite()`, `dl_allpass()`
 
 Technische Details:
 - **Audio-Ausgabe:** SAI1 Block A, I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz

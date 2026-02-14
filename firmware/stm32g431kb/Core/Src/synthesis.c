@@ -1,9 +1,7 @@
 #include "synthesis.h"
+#include "audio_config.h"
 #include "wavetables_integrated.h"
 #include <math.h>
-
-#define SAMPLE_RATE  44100.0f
-#define OUTPUT_GAIN  24000.0f
 
 /* --- Module state --- */
 static iwt_differentiator_t diff;

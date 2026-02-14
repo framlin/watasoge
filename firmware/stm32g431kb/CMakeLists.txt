@@ -26,6 +26,7 @@ set(SOURCES
     Core/Src/karplus.c
     Core/Src/output.c
     Core/Src/player.c
+    Core/Src/player_config.c
     Core/Src/stm32g4xx_hal_msp.c
     Core/Src/stm32g4xx_it.c
     Core/Src/system_stm32g4xx.c

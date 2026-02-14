@@ -1,4 +1,7 @@
 #include "karplus.h"
+#include "audio_config.h"
+#include "svf.h"
+#include "delay_line.h"
 #include <math.h>
 #include <string.h>
 
@@ -6,11 +9,8 @@
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-#define SAMPLE_RATE     44100.0f
 #define KS_DELAY_SIZE   1024
 #define KS_AP_SIZE      256
-#define OUTPUT_GAIN     24000.0f
-#define PI_F            3.14159265f
 
 /* ------------------------------------------------------------------ */
 /*  XorShift32 PRNG                                                   */
@@ -43,9 +43,6 @@ static void semi_lut_init(void)
 
 static inline float semitones_to_ratio(float semi)
 {
-    /* 2^(semi/12) = 2^(semi * 256 / (12*256))
-       Let x = semi / 12.0. Then 2^x.
-       We split x into integer octave + fractional for LUT lookup. */
     float octaves = semi * (1.0f / 12.0f);
     int oct_int = (int)octaves;
     float oct_frac = octaves - (float)oct_int;
@@ -73,10 +70,8 @@ static float svf_shift_lut[SVF_SHIFT_LUT_SIZE];
 static void svf_shift_lut_init(void)
 {
     for (int i = 0; i < SVF_SHIFT_LUT_SIZE; i++) {
-        /* i maps to 0..128 semitones above fundamental */
         float semi = (float)i;
         float ratio = semitones_to_ratio(semi);
-        /* Phase delay of ZDF-SVF at this ratio: 2*atan(1/ratio) / (2*pi) */
         svf_shift_lut[i] = 2.0f * atanf(1.0f / ratio) / (2.0f * PI_F);
     }
 }
@@ -89,52 +84,6 @@ static inline float svf_shift_lookup(float semitones)
     float frac = semitones - (float)idx;
     if (idx >= SVF_SHIFT_LUT_SIZE - 1) return svf_shift_lut[SVF_SHIFT_LUT_SIZE - 1];
     return svf_shift_lut[idx] + frac * (svf_shift_lut[idx + 1] - svf_shift_lut[idx]);
-}
-
-/* ------------------------------------------------------------------ */
-/*  Delay-Line helpers                                                */
-/* ------------------------------------------------------------------ */
-
-static inline void dl_write(float *line, uint16_t *pos, uint16_t size, float sample)
-{
-    line[*pos] = sample;
-    if (*pos == 0)
-        *pos = size - 1;
-    else
-        (*pos)--;
-}
-
-static inline float dl_read_hermite(const float *line, uint16_t write_pos,
-                                    uint16_t size, float delay)
-{
-    /* Split delay into integer + fractional */
-    int32_t d_int = (int32_t)delay;
-    float   d_frac = delay - (float)d_int;
-
-    int32_t base = (int32_t)write_pos + d_int;
-
-    float xm1 = line[(base)     % size];
-    float x0  = line[(base + 1) % size];
-    float x1  = line[(base + 2) % size];
-    float x2  = line[(base + 3) % size];
-
-    /* Hermite 4-point interpolation */
-    float c = (x1 - xm1) * 0.5f;
-    float v = x0 - x1;
-    float w = c + v;
-    float a = w + v + (x2 - x0) * 0.5f;
-    float b_neg = w + a;
-    return (((a * d_frac) - b_neg) * d_frac + c) * d_frac + x0;
-}
-
-static inline float dl_allpass(float *line, uint16_t *write_pos,
-                               uint16_t size, float sample,
-                               uint16_t delay, float coeff)
-{
-    float read = line[(*write_pos + delay) % size];
-    float write = sample + coeff * read;
-    dl_write(line, write_pos, size, write);
-    return -write * coeff + read;
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,14 +110,10 @@ static float cur_dispersion;
 /* Derived values */
 static float cur_delay;              /* Delay-line length in samples */
 
-/* SVF state (ZDF-SVF lowpass, Q=0.5) */
-static float svf_ic1eq;
-static float svf_ic2eq;
-
-/* Excitation SVF state */
-static float exc_svf_ic1eq;
-static float exc_svf_ic2eq;
-static float exc_remaining;         /* Remaining excitation samples */
+/* SVF state (loop filter + excitation filter) */
+static svf_state_t loop_svf;
+static svf_state_t exc_svf;
+static float exc_remaining;
 
 /* DC-blocker state */
 static float dc_x_prev;
@@ -179,41 +124,6 @@ static float curved_bridge;
 
 /* Trigger pending flag */
 static volatile uint8_t trigger_pending;
-
-/* ------------------------------------------------------------------ */
-/*  SVF processing (ZDF, trapezoidal integration, lowpass output)     */
-/* ------------------------------------------------------------------ */
-
-static inline float svf_process(float *ic1eq, float *ic2eq,
-                                float g, float r, float h,
-                                float input)
-{
-    float hp = (input - r * *ic1eq - g * *ic1eq - *ic2eq) * h;
-    float v1 = g * hp;
-    float bp = v1 + *ic1eq;
-    *ic1eq = v1 + bp;
-    float v2 = g * bp;
-    float lp = v2 + *ic2eq;
-    *ic2eq = v2 + lp;
-    return lp;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Compute SVF coefficients for a given normalized frequency         */
-/* ------------------------------------------------------------------ */
-
-typedef struct {
-    float g, r, h;
-} svf_coeff_t;
-
-static inline svf_coeff_t svf_compute_coeff(float freq_norm)
-{
-    svf_coeff_t c;
-    c.g = tanf(PI_F * freq_norm);
-    c.r = 2.0f;              /* Q = 0.5 => r = 1/Q = 2 */
-    c.h = 1.0f / (1.0f + c.r * c.g + c.g * c.g);
-    return c;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Init                                                              */
@@ -240,10 +150,8 @@ void karplus_init(void)
     cur_dispersion = target_dispersion;
     cur_delay = SAMPLE_RATE / cur_frequency;
 
-    svf_ic1eq = 0.0f;
-    svf_ic2eq = 0.0f;
-    exc_svf_ic1eq = 0.0f;
-    exc_svf_ic2eq = 0.0f;
+    loop_svf = (svf_state_t){0};
+    exc_svf = (svf_state_t){0};
     exc_remaining = 0.0f;
 
     dc_x_prev = 0.0f;
@@ -317,8 +225,7 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
         /* Excitation brightness filter: SVF lowpass on the noise */
         float exc_cutoff = cur_brightness * cur_brightness * 0.4f + 0.05f;
         svf_coeff_t ec = svf_compute_coeff(exc_cutoff);
-        exc_svf_ic1eq = 0.0f;
-        exc_svf_ic2eq = 0.0f;
+        exc_svf = (svf_state_t){0};
 
         /* Write noise into delay line using dl_write (circular convention) */
         memset(delay_line, 0, sizeof(delay_line));
@@ -328,13 +235,11 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
         curved_bridge = 0.0f;
         dc_x_prev = 0.0f;
         dc_y_prev = 0.0f;
-        svf_ic1eq = 0.0f;
-        svf_ic2eq = 0.0f;
+        loop_svf = (svf_state_t){0};
 
         for (uint16_t i = 0; i < burst_len; i++) {
             float noise = prng_float();
-            float filtered = svf_process(&exc_svf_ic1eq, &exc_svf_ic2eq,
-                                         ec.g, ec.r, ec.h, noise);
+            float filtered = svf_process(&exc_svf, ec, noise);
             dl_write(delay_line, &dl_pos, KS_DELAY_SIZE, filtered);
         }
 
@@ -440,7 +345,7 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
         }
 
         /* IIR damping filter (ZDF-SVF lowpass) */
-        s = svf_process(&svf_ic1eq, &svf_ic2eq, sc.g, sc.r, sc.h, s);
+        s = svf_process(&loop_svf, sc, s);
 
         /* Loop gain (damping coefficient) */
         s *= damping_coefficient;
