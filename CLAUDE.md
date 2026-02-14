@@ -54,7 +54,7 @@ Zwei Synthese-Engines implementiert:
 
 Implementiert nach Mutable Instruments Plaits und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung.
 
-### 2. Karplus-Strong String Synthesis (Branch `karplus_strong`, noch nicht auf Hardware verifiziert)
+### 2. Karplus-Strong String Synthesis (Branch `karplus_strong`, auf Hardware verifiziert)
 
 Karplus-Strong Synthese nach Mutable Instruments Rings/Plaits-Vorbild. Erzeugt gezupfte Saiten, inharmonische Klänge (Glocken, Gamelan), Sitar-Buzz und perkussive Sounds.
 

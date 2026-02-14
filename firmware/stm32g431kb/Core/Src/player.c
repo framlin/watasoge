@@ -32,12 +32,12 @@ static const group_def_t groups[GROUP_COUNT] = {
     { 143, 22, 261.626f,  0.9993f },  /* CLAPS — C4 */
     { 165, 50, 261.626f,  0.9993f },  /* LOFI_SNARES — C4 */
     { 215,  5, 1046.502f, 0.9985f },  /* LOFI_HIHATS — C6 */
-    /* KS groups: dummy wave entries (not used), count=8 for 8-note scale */
-    {   0,  8, 0.0f,      0.0f    },  /* KS_STRING */
-    {   0,  8, 0.0f,      0.0f    },  /* KS_BRIGHT */
-    {   0,  8, 0.0f,      0.0f    },  /* KS_INHARMONIC */
-    {   0,  8, 0.0f,      0.0f    },  /* KS_SITAR */
-    {   0,  8, 65.406f,   0.0f    },  /* KS_PERCUSSION — fixed pitch C2 */
+    /* KS groups: one "wave" per group (sound defined by KS parameters) */
+    {   0,  1, 0.0f,      0.0f    },  /* KS_STRING */
+    {   0,  1, 0.0f,      0.0f    },  /* KS_BRIGHT */
+    {   0,  1, 0.0f,      0.0f    },  /* KS_INHARMONIC */
+    {   0,  1, 0.0f,      0.0f    },  /* KS_SITAR */
+    {   0,  1, 65.406f,   0.0f    },  /* KS_PERCUSSION — fixed pitch C2 */
 };
 
 /* KS parameter presets per KS group */

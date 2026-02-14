@@ -12,13 +12,13 @@
 
 ## Aktueller Stand
 
-Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-Strong String Synthesis (implementiert, noch nicht auf Hardware verifiziert). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC. Player-Modul spielt 16 Instrumentengruppen (11 Wavetable + 5 Karplus-Strong) sequenziell ab. Audio-Quelle wird automatisch zwischen den Engines umgeschaltet.
+Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-Strong String Synthesis (auf Hardware verifiziert). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC. Player-Modul spielt 16 Instrumentengruppen (11 Wavetable + 5 Karplus-Strong) sequenziell ab. Audio-Quelle wird automatisch zwischen den Engines umgeschaltet. Flash-Nutzung: 84.284 Bytes (64,4%), RAM: 9.256 Bytes (28,3%).
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
 - **Audio-Buffer:** 128 Stereo-Frames (256 int16_t)
 - **Wavetable-Playback:** Float-Phase-Accumulator [0,1), Hermite-4-Punkt-Interpolation über integrierte Wavetables, Differenzierung + One-Pole-LP (adaptives Anti-Aliasing), frequenzabhängige Skalierung, Output-Gain ±24000 (~75% Full-Scale)
-- **Karplus-Strong:** Delay-Line (1024 floats) + Allpass-Delay-Line (256 floats), Hermite-Interpolation, ZDF-SVF Lowpass (Q=0.5), RT60-basiertes Decay, Allpass-Dispersion, Curved-Bridge-Nichtlinearität, DC-Blocker, Noise-Burst-Excitation, Per-Sample-Parameterinterpolation, SVF-Delay-Kompensation per LUT
+- **Karplus-Strong:** Delay-Line (1024 floats) + Allpass-Delay-Line (256 floats), Hermite-Interpolation, ZDF-SVF Lowpass (Q=0.5), RT60-basiertes Decay, Allpass-Dispersion, Curved-Bridge-Nichtlinearität, DC-Blocker, Noise-Burst-Excitation (via `dl_write` für korrekte zirkuläre Konvention), Per-Sample-Parameterinterpolation, SVF-Delay-Kompensation per LUT
 - **Gain-Envelope:** Dual-Modus: Smoothstep-Fade (256 Samples, ~5,8 ms) für melodische Sustain-Töne, exponentieller Decay für perkussive Hits (kategorieabhängig: Kicks 0.9995, Snares 0.9993, HiHats 0.9985). Pipeline läuft auch bei Mute weiter (Differentiator bleibt eingeschwungen).
 - **Pins:** PA8 (SAI1_SCK_A, AF14), PA9 (SAI1_FS_A, AF14), PA10 (SAI1_SD_A, AF14)
 - **MCK:** Deaktiviert (PCM5102 erzeugt MCLK intern)

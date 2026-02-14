@@ -320,7 +320,7 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
         exc_svf_ic1eq = 0.0f;
         exc_svf_ic2eq = 0.0f;
 
-        /* Write noise into delay line */
+        /* Write noise into delay line using dl_write (circular convention) */
         memset(delay_line, 0, sizeof(delay_line));
         memset(ap_line, 0, sizeof(ap_line));
         dl_pos = 0;
@@ -335,9 +335,8 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
             float noise = prng_float();
             float filtered = svf_process(&exc_svf_ic1eq, &exc_svf_ic2eq,
                                          ec.g, ec.r, ec.h, noise);
-            delay_line[i] = filtered;
+            dl_write(delay_line, &dl_pos, KS_DELAY_SIZE, filtered);
         }
-        dl_pos = burst_len - 1;
 
         /* Also set up remaining excitation for input-additive mode */
         exc_remaining = 0.0f;
@@ -384,7 +383,9 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
     float damping_compensation = 1.0f - svf_shift_lookup(damping_cutoff_semi);
 
     /* ---- Per-sample parameter interpolation increments ----------- */
-    float inv_n = 1.0f / (float)num_samples;
+    /* num_samples = total int16_t values (stereo), frames = mono samples */
+    uint16_t frames = num_samples / 2;
+    float inv_n = 1.0f / (float)frames;
     float delay_inc = (tgt_delay * damping_compensation - cur_delay * damping_compensation) * inv_n;
     float delay_now = cur_delay * damping_compensation;
 
@@ -392,7 +393,7 @@ void karplus_fill_buffer(int16_t *buf, uint16_t num_samples)
     float disp_now = cur_dispersion;
 
     /* ---- Sample loop --------------------------------------------- */
-    for (uint16_t i = 0; i < num_samples; i++) {
+    for (uint16_t i = 0; i < frames; i++) {
         float delay = delay_now + delay_inc * (float)i;
         float dispersion = disp_now + disp_inc * (float)i;
 
