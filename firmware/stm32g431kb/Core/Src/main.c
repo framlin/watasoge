@@ -15,7 +15,7 @@ int main(void)
     synthesis_init();
     karplus_init();
     output_init();
-    player_init(GROUP_KS_STRING);
+    player_init(GROUP_KS_KICK);
 
     while (1)
     {

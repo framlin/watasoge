@@ -12,7 +12,7 @@
 
 ## Aktueller Stand
 
-Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-Strong String Synthesis (auf Hardware verifiziert). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC. Player-Modul spielt 16 Instrumentengruppen (11 Wavetable + 5 Karplus-Strong) sequenziell ab. Audio-Quelle wird automatisch zwischen den Engines umgeschaltet. Flash-Nutzung: 84.284 Bytes (64,4%), RAM: 9.256 Bytes (28,3%).
+Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-Strong String Synthesis (auf Hardware verifiziert). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC. Player-Modul spielt 21 Instrumentengruppen sequenziell ab: 11 Wavetable-Gruppen, 4 KS-melodische Gruppen (String, Bright, Inharmonic, Sitar) und 6 KS-perkussive Gruppen (Kick, Snare, HiHat, Tom, Cowbell, Clave). Audio-Quelle wird automatisch zwischen den Engines umgeschaltet. Flash-Nutzung: 84.404 Bytes (64,5%), RAM: 9.256 Bytes (28,3%).
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
@@ -38,7 +38,7 @@ stm32g431kb/
 │   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
 │   │   ├── synthesis.h          # synthesis_init(), fill_buffer(), set_frequency/wave/mute/decay(), trigger()
 │   │   ├── karplus.h            # karplus_init(), fill_buffer(), set_frequency/damping/brightness/dispersion(), trigger()
-│   │   ├── player.h             # player_group_t enum (16 Gruppen), player_init(group), update(), beat_pending()
+│   │   ├── player.h             # player_group_t enum (21 Gruppen), player_init(group), update(), beat_pending()
 │   │   ├── output.h             # output_init(), output_set_source(fill_buffer_fn)
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   ├── wavetables_integrated.h # 220 integrierte Wavetables (MI-Plaits-Stil, ~58 KB)
@@ -77,7 +77,7 @@ main.c  ──init──→  synthesis.c    (Wavetable-Signalerzeugung)
 
 - **synthesis**: Erzeugt Audio-Samples via Integrated Wavetable Playback (220 Waves aus Flash), Float-Phase-Accumulator, Hermite-Interpolation, Differenzierung + One-Pole-LP, frequenzabhängige Skalierung, Dual-Envelope (Smoothstep-Fade für Sustain, exponentieller Decay für Perkussion), füllt Stereo-Buffer (L=R). API: `synthesis_fill_buffer()`, `synthesis_set_frequency()`, `synthesis_set_wave()`, `synthesis_set_mute()`, `synthesis_set_decay()`, `synthesis_trigger()`.
 - **karplus**: Karplus-Strong String Synthesis nach MI Rings/Plaits-Vorbild. Ringbuffer-Delay-Line (1024 floats) mit Hermite-Interpolation, ZDF-SVF Lowpass (Q=0.5) als Loop-Filter, RT60-basiertes Decay, Allpass-Dispersion (256 floats) für Inharmonizität, Curved-Bridge-Nichtlinearität für Sitar-Buzz, DC-Blocker, Stabilitäts-Clamp, Noise-Burst-Excitation (XorShift32 PRNG + SVF), Per-Sample-Parameterinterpolation, SVF-Delay-Kompensation per LUT. API: `karplus_fill_buffer()`, `karplus_set_frequency()`, `karplus_set_damping()`, `karplus_set_brightness()`, `karplus_set_dispersion()`, `karplus_trigger()`.
-- **player**: Tick-basierte Zustandsmaschine mit 16 parametrisch wählbaren Instrumentengruppen. 11 Wavetable-Gruppen (melodisch + perkussiv) und 5 KS-Gruppen (String, Bright, Inharmonic, Sitar, Percussion). Schaltet automatisch die Audio-Quelle in output um. Beat-Flag für LED-Synchronisation. API: `player_init(group)`, `player_update()`, `player_beat_pending()`.
+- **player**: Tick-basierte Zustandsmaschine mit 21 parametrisch wählbaren Instrumentengruppen. 11 Wavetable-Gruppen (melodisch + perkussiv), 4 KS-melodische Gruppen (String, Bright, Inharmonic, Sitar) und 6 KS-perkussive Gruppen (Kick, Snare, HiHat, Tom, Cowbell, Clave). Schaltet automatisch die Audio-Quelle in output um. Beat-Flag für LED-Synchronisation. API: `player_init(group)`, `player_update()`, `player_beat_pending()`.
 - **output**: Kapselt SAI1/I2S/DMA. Umschaltbarer Funktionspointer `fill_buffer_fn` für Audio-Quellenwahl (Default: synthesis). DMA-Callbacks rufen die aktive Quelle. API: `output_init()`, `output_set_source(fn)`.
 - **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → synthesis → karplus → output → player), non-blocking Main-Loop (`player_update()` + beat-synchrone LED).
 

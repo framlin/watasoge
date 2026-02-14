@@ -54,7 +54,7 @@ Zwei Synthese-Engines implementiert:
 
 Implementiert nach Mutable Instruments Plaits und auf dem NUCLEO-G431KB verifiziert. 220 Wavetables werden über die Plaits-Pipeline abgespielt: Hermite-Interpolation → Differenzierung → One-Pole-Tiefpass → Skalierung.
 
-### 2. Karplus-Strong String Synthesis (Branch `karplus_strong`, auf Hardware verifiziert)
+### 2. Karplus-Strong String Synthesis (auf Hardware verifiziert)
 
 Karplus-Strong Synthese nach Mutable Instruments Rings/Plaits-Vorbild. Erzeugt gezupfte Saiten, inharmonische Klänge (Glocken, Gamelan), Sitar-Buzz und perkussive Sounds.
 
@@ -63,9 +63,10 @@ Karplus-Strong Synthese nach Mutable Instruments Rings/Plaits-Vorbild. Erzeugt g
 - **Parameter:** Frequency, Damping (RT60-basiert), Brightness (SVF-Cutoff), Dispersion [-1..+1]
 - **RAM-Bedarf:** ~5,2 KB (Delay-Lines + State)
 
-Player-Modul spielt alle Waves sequenziell ab, gruppiert in 16 Instrumentengruppen:
+Player-Modul spielt alle Waves sequenziell ab, gruppiert in 21 Instrumentengruppen:
 - **Wavetable-Gruppen (11 Gruppen):** Melodisch (6 Gruppen, Waves 0–115) mit C-Dur-Tonleiter C1–C2, perkussiv (5 Gruppen, Waves 116–219) mit Decay-Envelope
-- **Karplus-Strong-Gruppen (5 Gruppen):** KS_STRING (warm), KS_BRIGHT (brillant), KS_INHARMONIC (Glocken), KS_SITAR (Buzz), KS_PERCUSSION (kurzer Decay)
+- **KS-Melodisch (4 Gruppen):** KS_STRING (warm), KS_BRIGHT (brillant), KS_INHARMONIC (Glocken), KS_SITAR (Buzz) — C-Dur-Tonleiter C3–C4
+- **KS-Perkussiv (6 Gruppen):** KS_KICK (C2, tief), KS_SNARE (A3, Curved Bridge), KS_HIHAT (E6, metallisch), KS_TOM (G2, resonant), KS_COWBELL (E5, inharmonisch), KS_CLAVE (A5, holzig) — je 16 Hits bei 120 BPM
 - Audio-Quelle wird automatisch zwischen Wavetable und Karplus-Strong umgeschaltet (`output_set_source()`)
 - LED blinkt synchron zu den Beats
 

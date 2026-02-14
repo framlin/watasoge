@@ -37,7 +37,12 @@ static const group_def_t groups[GROUP_COUNT] = {
     {   0,  1, 0.0f,      0.0f    },  /* KS_BRIGHT */
     {   0,  1, 0.0f,      0.0f    },  /* KS_INHARMONIC */
     {   0,  1, 0.0f,      0.0f    },  /* KS_SITAR */
-    {   0,  1, 65.406f,   0.0f    },  /* KS_PERCUSSION — fixed pitch C2 */
+    {   0,  1, 65.406f,   0.0f    },  /* KS_KICK — C2, deep thud */
+    {   0,  1, 220.000f,  0.0f    },  /* KS_SNARE — A3, buzzy */
+    {   0,  1, 1318.510f, 0.0f    },  /* KS_HIHAT — E6, metallic */
+    {   0,  1, 97.999f,   0.0f    },  /* KS_TOM — G2, resonant */
+    {   0,  1, 659.255f,  0.0f    },  /* KS_COWBELL — E5, metallic */
+    {   0,  1, 880.000f,  0.0f    },  /* KS_CLAVE — A5, wooden */
 };
 
 /* KS parameter presets per KS group */
@@ -46,7 +51,12 @@ static const ks_params_t ks_presets[] = {
     { 0.80f, 0.90f,  0.00f },  /* KS_BRIGHT: bright string */
     { 0.75f, 0.60f,  0.60f },  /* KS_INHARMONIC: bell/gamelan */
     { 0.70f, 0.50f, -0.70f },  /* KS_SITAR: curved bridge buzz */
-    { 0.30f, 0.80f,  0.00f },  /* KS_PERCUSSION: short decay drum */
+    { 0.50f, 0.50f,  0.00f },  /* KS_KICK: deep thud */
+    { 0.40f, 0.90f, -0.50f },  /* KS_SNARE: bright, curved bridge buzz */
+    { 0.30f, 1.00f,  0.80f },  /* KS_HIHAT: metallic, inharmonic */
+    { 0.50f, 0.50f,  0.00f },  /* KS_TOM: warm, resonant */
+    { 0.45f, 0.70f,  0.70f },  /* KS_COWBELL: metallic, inharmonic */
+    { 0.35f, 0.60f,  0.30f },  /* KS_CLAVE: wooden click */
 };
 
 /* Melodic: C major scale C1–C2 */
@@ -87,7 +97,7 @@ static uint8_t  beat_flag;
 
 static uint8_t is_ks_group(void)
 {
-    return current_group >= GROUP_KS_STRING && current_group <= GROUP_KS_PERCUSSION;
+    return current_group >= GROUP_KS_STRING && current_group <= GROUP_KS_CLAVE;
 }
 
 static uint8_t is_percussive(void)
