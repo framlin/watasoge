@@ -10,10 +10,6 @@ Wavetable-basierter Klangerzeuger (Synthesizer) für Eurorack. Entwicklungsplatt
 watasoge/
 ├── CLAUDE.md                      # Diese Datei
 └── firmware/
-    ├── rp2040/                    # Firmware für Raspberry Pi Pico
-    │   ├── CLAUDE.md
-    │   └── doc/
-    │       └── wavetables_for_pi_pico.md
     └── stm32g431kb/               # Firmware für STM32G431KB / NUCLEO-G431KB
         ├── CLAUDE.md
         ├── CMakeLists.txt         # CMake Build (Ninja, arm-none-eabi-gcc)
@@ -28,14 +24,11 @@ watasoge/
         └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
 ```
 
-## Hardware-Plattformen
+## Hardware
 
-| Plattform | CPU | Flash | RAM | Audio-Interface |
-|---|---|---|---|---|
-| Raspberry Pi Pico (RP2040) | Dual Cortex-M0+, 133 MHz | 2 MB | 264 KB | I2S via PIO |
-| STM32G431KB (NUCLEO-G431KB) | Cortex-M4F, 170 MHz | 128 KB | 32 KB | I2S via SAI |
-
-Gemeinsam: PCM5102 Audio-DAC, 16-Bit, 44.1 kHz.
+- **MCU:** STM32G431KB (Cortex-M4F, 170 MHz, 128 KB Flash, 32 KB RAM)
+- **Board:** NUCLEO-G431KB
+- **Audio-DAC:** PCM5102, 16-Bit, 44.1 kHz, I2S via SAI
 
 ## Wavetable-Daten
 
