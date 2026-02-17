@@ -9,6 +9,7 @@ Wavetable-basierter Klangerzeuger (Synthesizer) für Eurorack. Entwicklungsplatt
 ```
 watasoge/
 ├── CLAUDE.md                      # Diese Datei
+├── README.md                      # Projektbeschreibung
 └── firmware/
     └── stm32g431kb/               # Firmware für STM32G431KB / NUCLEO-G431KB
         ├── CLAUDE.md
@@ -107,6 +108,7 @@ Projektspezifische Skills unter `.claude/skills/`:
 | **ucconfig** | STM32G431KB Build-Konfiguration: HAL-Module, CMakeLists.txt, Linker-Script, Toolchain |
 | **ucbuild** | Firmware bauen mit CMake + Ninja + arm-none-eabi-gcc |
 | **ucflash** | Firmware flashen via OpenOCD auf NUCLEO-G431KB |
+| **deploy** | Deployment-Branch erstellen/aktualisieren: persönliche Pfade entfernen |
 
 ## Externe Referenzen
 
