@@ -79,19 +79,49 @@ Persönliche Pfade werden je nach Kontext unterschiedlich behandelt:
    - Falls noch Treffer: dem Benutzer zeigen und nachbessern.
    - Falls keine Treffer: weiter zu Phase 4.
 
+### Phase 3b: README sicherstellen
+
+10. Prüfen, ob `README.md` im Repository-Root vorhanden ist.
+    - Falls vorhanden: keine Aktion nötig (wurde von `main` übernommen).
+    - Falls nicht vorhanden: `README.md` aus `~/obsidian/watasoge.zettelkasten/io/input/` kopieren (neueste Datei mit Alias "README"), dabei den Obsidian-Frontmatter (YAML-Header zwischen `---`) entfernen.
+
 ### Phase 4: Commit
 
-10. Alle Änderungen stagen und committen:
+11. Alle Änderungen stagen und committen:
     ```
     git add -A
-    git commit -m "Persönliche Pfade entfernt für deployment-Branch"
+    git commit -m "deployment-Branch aktualisiert"
     ```
-11. `git diff main..deployment --stat` dem Benutzer zeigen.
-12. Zurück auf `main` wechseln: `git checkout main`.
+12. `git diff main..deployment --stat` dem Benutzer zeigen.
+13. Zurück auf `main` wechseln: `git checkout main`.
+
+### Phase 5: Push
+
+14. Push auf Gitea (origin):
+    ```
+    git push origin deployment --force-with-lease
+    ```
+15. GitHub-Remote sicherstellen:
+    - Prüfen, ob Remote `github` existiert (`git remote get-url github`).
+    - Falls nicht: `git remote add github https://github.com/framlin/watasoge.git`
+16. Push **nur den deployment-Branch** auf GitHub:
+    ```
+    git push github deployment --force-with-lease
+    ```
+    **Niemals** `main` oder andere Branches auf GitHub pushen.
+17. Ergebnis dem Benutzer bestätigen (Gitea- und GitHub-URLs).
+
+## Remotes
+
+| Remote | URL | Branches |
+|---|---|---|
+| `origin` (Gitea) | `ssh://git@jupiter:2222/mbaaba/watasoge.git` | `main`, `deployment` |
+| `github` (GitHub) | `https://github.com/framlin/watasoge.git` | **nur `deployment`** |
 
 ## Wichtige Hinweise
 
 - **Firmware-Quellcode** (C-Dateien, Header, CMakeLists.txt, Toolchain-File, Linker-Script) darf **nicht** verändert werden. Persönliche Pfade kommen nur in Dokumentations- und Konfigurationsdateien vor (.md, SKILL.md).
 - Der Skill verändert **niemals** den `main`-Branch.
 - Der `deployment`-Branch wird bei jedem Aufruf von `main` neu aufgebaut (`reset --hard main`), sodass Änderungen auf `main` immer korrekt übernommen werden.
-- Keine automatischen `git push`-Operationen — der Benutzer entscheidet, ob und wohin gepusht wird.
+- `--force-with-lease` ist nötig, weil der Branch bei jedem Aufruf per `reset --hard main` neu aufgebaut wird.
+- Auf GitHub landet **ausschließlich** der `deployment`-Branch. `main` und andere Branches werden **nie** auf GitHub gepusht.
