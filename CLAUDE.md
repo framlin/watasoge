@@ -108,7 +108,7 @@ Projektspezifische Skills unter `.claude/skills/`:
 | **ucconfig** | STM32G431KB Build-Konfiguration: HAL-Module, CMakeLists.txt, Linker-Script, Toolchain |
 | **ucbuild** | Firmware bauen mit CMake + Ninja + arm-none-eabi-gcc |
 | **ucflash** | Firmware flashen via OpenOCD auf NUCLEO-G431KB |
-| **deploy** | Deployment-Branch erstellen/aktualisieren: persönliche Pfade entfernen |
+| **deploy** | Deployment-Branch erstellen/aktualisieren: persönliche Pfade entfernen, Push auf Gitea + GitHub |
 
 ## Externe Referenzen
 

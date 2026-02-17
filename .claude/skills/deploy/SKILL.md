@@ -103,7 +103,7 @@ Persönliche Pfade werden je nach Kontext unterschiedlich behandelt:
     ```
 15. GitHub-Remote sicherstellen:
     - Prüfen, ob Remote `github` existiert (`git remote get-url github`).
-    - Falls nicht: `git remote add github https://github.com/framlin/watasoge.git`
+    - Falls nicht: `git remote add github git@github.com:framlin/watasoge.git`
 16. Push **nur den deployment-Branch** auf GitHub:
     ```
     git push github deployment --force-with-lease
@@ -116,7 +116,7 @@ Persönliche Pfade werden je nach Kontext unterschiedlich behandelt:
 | Remote | URL | Branches |
 |---|---|---|
 | `origin` (Gitea) | `ssh://git@jupiter:2222/mbaaba/watasoge.git` | `main`, `deployment` |
-| `github` (GitHub) | `https://github.com/framlin/watasoge.git` | **nur `deployment`** |
+| `github` (GitHub) | `git@github.com:framlin/watasoge.git` | **nur `deployment`** |
 
 ## Wichtige Hinweise
 
