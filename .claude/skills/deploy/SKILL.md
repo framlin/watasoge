@@ -74,42 +74,46 @@ Persönliche Pfade werden je nach Kontext unterschiedlich behandelt:
 ### Phase 3: Bereinigung
 
 7. **Benutzer um Bestätigung bitten** bevor Änderungen durchgeführt werden.
-8. Änderungen gemäß der bestätigten Strategie durchführen.
-9. Nach allen Änderungen erneut nach persönlichen Pfadmustern suchen (Verifikation).
-   - Falls noch Treffer: dem Benutzer zeigen und nachbessern.
-   - Falls keine Treffer: weiter zu Phase 4.
+8. **Zuerst:** `.claude/skills/deploy/SKILL.md` vom deployment-Branch entfernen (`git rm`).
+   Diese Datei enthält selbst persönliche Pfade als Dokumentation und ist ein reines
+   Entwicklungswerkzeug, das auf dem deployment-Branch nicht benötigt wird.
+9. Weitere Änderungen gemäß der bestätigten Strategie durchführen.
+10. Nach allen Änderungen erneut nach persönlichen Pfadmustern suchen (Verifikation).
+    - Es dürfen **keine** Treffer mehr vorhanden sein — keine Ausnahmen.
+    - Falls noch Treffer: dem Benutzer zeigen und nachbessern.
+    - Falls keine Treffer: weiter zu Phase 4.
 
 ### Phase 3b: README sicherstellen
 
-10. Prüfen, ob `README.md` im Repository-Root vorhanden ist.
+11. Prüfen, ob `README.md` im Repository-Root vorhanden ist.
     - Falls vorhanden: keine Aktion nötig (wurde von `main` übernommen).
     - Falls nicht vorhanden: `README.md` aus `~/obsidian/watasoge.zettelkasten/io/input/` kopieren (neueste Datei mit Alias "README"), dabei den Obsidian-Frontmatter (YAML-Header zwischen `---`) entfernen.
 
 ### Phase 4: Commit
 
-11. Alle Änderungen stagen und committen:
+12. Alle Änderungen stagen und committen:
     ```
     git add -A
     git commit -m "deployment-Branch aktualisiert"
     ```
-12. `git diff main..deployment --stat` dem Benutzer zeigen.
-13. Zurück auf `main` wechseln: `git checkout main`.
+13. `git diff main..deployment --stat` dem Benutzer zeigen.
+14. Zurück auf `main` wechseln: `git checkout main`.
 
 ### Phase 5: Push
 
-14. Push auf Gitea (origin):
+15. Push auf Gitea (origin):
     ```
     git push origin deployment --force-with-lease
     ```
-15. GitHub-Remote sicherstellen:
+16. GitHub-Remote sicherstellen:
     - Prüfen, ob Remote `github` existiert (`git remote get-url github`).
     - Falls nicht: `git remote add github git@github.com:framlin/watasoge.git`
-16. Push **nur den deployment-Branch** auf GitHub:
+17. Push **nur den deployment-Branch** auf GitHub:
     ```
     git push github deployment --force-with-lease
     ```
     **Niemals** `main` oder andere Branches auf GitHub pushen.
-17. Ergebnis dem Benutzer bestätigen (Gitea- und GitHub-URLs).
+18. Ergebnis dem Benutzer bestätigen (Gitea- und GitHub-URLs).
 
 ## Remotes
 
@@ -120,6 +124,7 @@ Persönliche Pfade werden je nach Kontext unterschiedlich behandelt:
 
 ## Wichtige Hinweise
 
+- **Diese Datei (`deploy/SKILL.md`) wird vom deployment-Branch entfernt** (`git rm`), da sie selbst persönliche Pfadmuster als Dokumentation enthält. Sie ist ein reines Entwicklungswerkzeug und wird nur auf `main` benötigt.
 - **Firmware-Quellcode** (C-Dateien, Header, CMakeLists.txt, Toolchain-File, Linker-Script) darf **nicht** verändert werden. Persönliche Pfade kommen nur in Dokumentations- und Konfigurationsdateien vor (.md, SKILL.md).
 - Der Skill verändert **niemals** den `main`-Branch.
 - Der `deployment`-Branch wird bei jedem Aufruf von `main` neu aufgebaut (`reset --hard main`), sodass Änderungen auf `main` immer korrekt übernommen werden.
