@@ -3,7 +3,6 @@
 #include "synthesis.h"
 #include "karplus.h"
 #include "output.h"
-#include "stm32g4xx_hal.h"
 
 /* --- Module state --- */
 
@@ -11,8 +10,6 @@ static uint8_t  current_group;
 static const group_def_t *grp;
 static uint16_t current_wave;
 static uint8_t  current_note;
-static uint32_t event_tick;
-static uint8_t  note_on;
 static uint8_t  beat_flag;
 
 /* --- Helpers --- */
@@ -57,16 +54,13 @@ static void start_note(void)
         synthesis_set_frequency(c_major_freqs[current_note]);
         synthesis_set_mute(0);
     }
-    note_on = 1;
     beat_flag = 1;
-    event_tick = HAL_GetTick();
 }
 
 static void advance_wave(void)
 {
     current_wave++;
     if (current_wave >= grp->start + grp->count) {
-        /* Advance to next group, wrap at end */
         current_group++;
         if (current_group >= GROUP_COUNT)
             current_group = 0;
@@ -81,8 +75,6 @@ static void advance_wave(void)
         if (!is_percussive())
             synthesis_set_frequency(c_major_freqs[0]);
     }
-
-    start_note();
 }
 
 /* --- Public API --- */
@@ -108,74 +100,32 @@ void player_init(player_group_t group)
     if (!is_ks_group()) {
         synthesis_set_wave(grp->start);
     }
+}
 
+void player_note_on(void)
+{
     start_note();
 }
 
-void player_update(void)
+void player_note_off(void)
 {
-    uint32_t now = HAL_GetTick();
-    uint32_t elapsed = now - event_tick;
+    /* Melodic wavetable: mute (fade-out) */
+    if (!is_ks_group() && !is_percussive()) {
+        synthesis_set_mute(1);
+    }
+    /* Percussive and KS: natural decay, no stop */
 
+    /* Advance to next note */
+    current_note++;
     if (is_ks_group()) {
-        /* Karplus-Strong groups */
-        if (is_percussive()) {
-            /* KS percussion: trigger hits at tempo */
-            if (elapsed >= KS_PERC_BEAT_MS) {
-                current_note++;
-                if (current_note >= KS_PERC_HITS) {
-                    advance_wave();
-                } else {
-                    karplus_trigger();
-                    beat_flag = 1;
-                    event_tick = now;
-                }
-            }
-        } else {
-            /* KS melodic: trigger + wait for decay, then next note */
-            if (note_on) {
-                if (elapsed >= KS_NOTE_MS) {
-                    note_on = 0;
-                    event_tick = now;
-                }
-            } else {
-                if (elapsed >= KS_PAUSE_MS) {
-                    current_note++;
-                    if (current_note >= MELODY_NOTES) {
-                        advance_wave();
-                    } else {
-                        start_note();
-                    }
-                }
-            }
-        }
-    } else if (is_percussive()) {
-        if (elapsed >= PERC_BEAT_MS) {
-            current_note++;
-            if (current_note >= PERC_HITS) {
-                advance_wave();
-            } else {
-                synthesis_trigger();
-                beat_flag = 1;
-                event_tick = now;
-            }
+        uint8_t max_notes = is_percussive() ? KS_PERC_HITS : MELODY_NOTES;
+        if (current_note >= max_notes) {
+            advance_wave();
         }
     } else {
-        if (note_on) {
-            if (elapsed >= MELODY_ON_MS) {
-                synthesis_set_mute(1);
-                note_on = 0;
-                event_tick = now;
-            }
-        } else {
-            if (elapsed >= MELODY_OFF_MS) {
-                current_note++;
-                if (current_note >= MELODY_NOTES) {
-                    advance_wave();
-                } else {
-                    start_note();
-                }
-            }
+        uint8_t max_notes = is_percussive() ? PERC_HITS : MELODY_NOTES;
+        if (current_note >= max_notes) {
+            advance_wave();
         }
     }
 }

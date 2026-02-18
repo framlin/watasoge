@@ -25,6 +25,7 @@ set(SOURCES
     Core/Src/synthesis.c
     Core/Src/karplus.c
     Core/Src/output.c
+    Core/Src/input.c
     Core/Src/player.c
     Core/Src/player_config.c
     Core/Src/stm32g4xx_hal_msp.c

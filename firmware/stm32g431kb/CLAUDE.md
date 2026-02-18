@@ -12,7 +12,7 @@
 
 ## Aktueller Stand
 
-Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-Strong String Synthesis (auf Hardware verifiziert). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC. Player-Modul spielt 21 Instrumentengruppen sequenziell ab: 11 Wavetable-Gruppen, 4 KS-melodische Gruppen (String, Bright, Inharmonic, Sitar) und 6 KS-perkussive Gruppen (Kick, Snare, HiHat, Tom, Cowbell, Clave). Audio-Quelle wird automatisch zwischen den Engines umgeschaltet. Flash-Nutzung: 84.404 Bytes (64,5%), RAM: 9.256 Bytes (28,3%).
+Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-Strong String Synthesis (auf Hardware verifiziert). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC. Gate-gesteuerter Player: externes Gate-Signal an PA0 (EXTI, Rising+Falling) triggert Note-ON (steigende Flanke) und Note-OFF (fallende Flanke). Player bestimmt WAS gespielt wird (Ton, Engine, Parameter), das Gate bestimmt WANN und WIE LANGE. 21 Instrumentengruppen: 11 Wavetable, 4 KS-melodisch, 6 KS-perkussiv. Audio-Quelle wird automatisch zwischen den Engines umgeschaltet. Flash-Nutzung: 84.440 Bytes (64,5%), RAM: 9.124 Bytes (27,9%).
 
 - **SAI1 Block A:** I2S-Master-TX, 16-Bit Stereo, ~44.1 kHz (SYSCLK-basiert, ~44.27 kHz)
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks
@@ -20,7 +20,8 @@ Zwei Synthese-Engines: Integrated Wavetable Playback (verifiziert) und Karplus-S
 - **Wavetable-Playback:** Float-Phase-Accumulator [0,1), Hermite-4-Punkt-Interpolation über integrierte Wavetables, Differenzierung + One-Pole-LP (adaptives Anti-Aliasing), frequenzabhängige Skalierung, Output-Gain ±24000 (~75% Full-Scale)
 - **Karplus-Strong:** Delay-Line (1024 floats) + Allpass-Delay-Line (256 floats), Hermite-Interpolation, ZDF-SVF Lowpass (Q=0.5), RT60-basiertes Decay, Allpass-Dispersion, Curved-Bridge-Nichtlinearität, DC-Blocker, Noise-Burst-Excitation (via `dl_write` für korrekte zirkuläre Konvention), Per-Sample-Parameterinterpolation, SVF-Delay-Kompensation per LUT
 - **Gain-Envelope:** Dual-Modus: Smoothstep-Fade (256 Samples, ~5,8 ms) für melodische Sustain-Töne, exponentieller Decay für perkussive Hits (kategorieabhängig: Kicks 0.9995, Snares 0.9993, HiHats 0.9985). Pipeline läuft auch bei Mute weiter (Differentiator bleibt eingeschwungen).
-- **Pins:** PA8 (SAI1_SCK_A, AF14), PA9 (SAI1_FS_A, AF14), PA10 (SAI1_SD_A, AF14)
+- **Gate-Input:** PA0 (EXTI, Rising+Falling, Pulldown) — externes Gate-Signal für Note-ON/OFF
+- **Pins:** PA0 (Gate-Input), PA8 (SAI1_SCK_A, AF14), PA9 (SAI1_FS_A, AF14), PA10 (SAI1_SD_A, AF14)
 - **MCK:** Deaktiviert (PCM5102 erzeugt MCLK intern)
 
 ### Firmware-Struktur
@@ -36,25 +37,27 @@ stm32g431kb/
 ├── Core/
 │   ├── Inc/
 │   │   ├── main.h               # LED2_PIN (PB8), Error_Handler
+│   │   ├── input.h              # Gate-Input API: input_init(), gate_on/off_pending()
 │   │   ├── audio_config.h       # Gemeinsame Konstanten: SAMPLE_RATE, OUTPUT_GAIN, PI_F
 │   │   ├── svf.h                # Wiederverwendbarer ZDF-SVF: svf_state_t, svf_coeff_t, svf_process()
 │   │   ├── delay_line.h         # Delay-Line-Operationen: dl_write(), dl_read_hermite(), dl_allpass()
 │   │   ├── synthesis.h          # synthesis_init(), fill_buffer(), set_frequency/wave/mute/decay(), trigger()
 │   │   ├── karplus.h            # karplus_init(), fill_buffer(), set_frequency/damping/brightness/dispersion(), trigger()
-│   │   ├── player.h             # player_group_t enum (21 Gruppen), player_init(group), update(), beat_pending()
+│   │   ├── player.h             # player_group_t enum (21 Gruppen), player_init(group), note_on(), note_off(), beat_pending()
 │   │   ├── player_config.h      # group_def_t, ks_params_t, Timing-Konstanten, extern-Deklarationen
 │   │   ├── output.h             # output_init(fill_buffer_fn), output_set_source(fill_buffer_fn)
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   ├── wavetables_integrated.h # 220 integrierte Wavetables (MI-Plaits-Stil, ~58 KB)
 │   │   └── stm32g4xx_it.h       # Interrupt-Prototypen
 │   └── Src/
-│       ├── main.c               # Orchestrierung: Clock, GPIO, Init, non-blocking Loop (Player + LED)
+│       ├── main.c               # Orchestrierung: Clock, GPIO, Input-Init, Gate-Polling Loop (Player + LED)
+│       ├── input.c              # Gate-Input: PA0 EXTI-Konfiguration, HAL_GPIO_EXTI_Callback, Polling-Flags
 │       ├── synthesis.c          # Signalerzeugung: IWT Playback (Hermite, Diff, LP), Dual-Envelope
 │       ├── karplus.c            # Karplus-Strong: nutzt svf.h + delay_line.h, Allpass, Curved Bridge, Excitation
-│       ├── player.c             # Wave-Sequencer: 21 Gruppen, automatische Quellenwahl (Logik)
+│       ├── player.c             # Gate-gesteuerter Sequencer: 21 Gruppen, note_on/off, automatische Quellenwahl
 │       ├── player_config.c      # Gruppen-Definitionen, KS-Presets, Frequenz-Arrays (Daten)
 │       ├── output.c             # Audio-Ausgabe: SAI/DMA, Dependency-Injection für fill_buffer_fn
-│       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick(), DMA1_Ch1 → HAL_DMA_IRQHandler()
+│       ├── stm32g4xx_it.c       # SysTick → HAL_IncTick(), DMA1_Ch1 → HAL_DMA_IRQHandler(), EXTI0 → HAL_GPIO_EXTI_IRQHandler()
 │       ├── stm32g4xx_hal_msp.c  # SYSCFG/PWR, SAI1 MspInit (GPIO AF14, DMA1 Circular)
 │       ├── system_stm32g4xx.c   # SystemInit (FPU), SystemCoreClockUpdate
 │       ├── syscalls.c           # Newlib Stubs
@@ -65,15 +68,19 @@ stm32g431kb/
 ### Modul-Architektur
 
 ```
-main.c  ──init──→  synthesis.c    (Wavetable-Signalerzeugung)
+main.c  ──init──→  input.c           (Gate-Eingang PA0, EXTI)
+   │                    │
+   │                    └──pollt──→  gate_on/off_pending()
+   │
+   ├───init──→  synthesis.c          (Wavetable-Signalerzeugung)
    │                    ↑
-   ├───init──→  karplus.c         (Karplus-Strong-Signalerzeugung)
+   ├───init──→  karplus.c            (Karplus-Strong-Signalerzeugung)
    │                ↑
-   ├───init──→  output.c          (Audio-Ausgabe, umschaltbare Quelle)
+   ├───init──→  output.c             (Audio-Ausgabe, umschaltbare Quelle)
    │                │
    │                └──ruft auf──→  fill_buffer_fn (synthesis oder karplus)
    │
-   └───init+loop──→  player.c     (Sequencer, steuert beide Engines)
+   └───init+gate──→  player.c        (Gate-gesteuerter Sequencer)
                         │
                         ├──steuert──→  synthesis_set_wave/frequency/mute()
                         ├──steuert──→  karplus_set_frequency/damping/brightness/dispersion()
@@ -85,10 +92,11 @@ main.c  ──init──→  synthesis.c    (Wavetable-Signalerzeugung)
 - **delay_line** (`delay_line.h`): Wiederverwendbare Delay-Line-Operationen (Inline-Header). `dl_write()` (zirkuläres Schreiben), `dl_read_hermite()` (Hermite-4-Punkt-Interpolation), `dl_allpass()` (Allpass-Filter). Wird von karplus.c genutzt.
 - **synthesis**: Erzeugt Audio-Samples via Integrated Wavetable Playback (220 Waves aus Flash), Float-Phase-Accumulator, Hermite-Interpolation, Differenzierung + One-Pole-LP, frequenzabhängige Skalierung, Dual-Envelope (Smoothstep-Fade für Sustain, exponentieller Decay für Perkussion), füllt Stereo-Buffer (L=R). API: `synthesis_fill_buffer()`, `synthesis_set_frequency()`, `synthesis_set_wave()`, `synthesis_set_mute()`, `synthesis_set_decay()`, `synthesis_trigger()`.
 - **karplus**: Karplus-Strong String Synthesis nach MI Rings/Plaits-Vorbild. Nutzt `svf.h` für Loop-Filter und Excitation-Filter, `delay_line.h` für Ringbuffer-Operationen. RT60-basiertes Decay, Allpass-Dispersion (256 floats) für Inharmonizität, Curved-Bridge-Nichtlinearität für Sitar-Buzz, DC-Blocker, Stabilitäts-Clamp, Noise-Burst-Excitation (XorShift32 PRNG), Per-Sample-Parameterinterpolation, SVF-Delay-Kompensation per LUT. API: `karplus_fill_buffer()`, `karplus_set_frequency()`, `karplus_set_damping()`, `karplus_set_brightness()`, `karplus_set_dispersion()`, `karplus_trigger()`.
-- **player**: Tick-basierte Zustandsmaschine (Sequencer-Logik). Steuert 21 Instrumentengruppen, schaltet automatisch die Audio-Quelle in output um. Beat-Flag für LED-Synchronisation. API: `player_init(group)`, `player_update()`, `player_beat_pending()`.
+- **input** (`input.c/.h`): Gate-Eingang PA0 als EXTI (Rising+Falling, Pulldown). `HAL_GPIO_EXTI_Callback()` setzt volatile Flags. Polling-API: `input_gate_on_pending()`, `input_gate_off_pending()`. NVIC-Priorität 5.
+- **player**: Gate-gesteuerter Sequencer. Steuert 21 Instrumentengruppen, schaltet automatisch die Audio-Quelle in output um. Beat-Flag für LED-Synchronisation. API: `player_init(group)`, `player_note_on()`, `player_note_off()`, `player_beat_pending()`. Note-OFF mutet melodische Wavetables und rückt Note-Counter vor; perkussive/KS klingen natürlich aus.
 - **player_config** (`player_config.c/.h`): Gruppen-Definitionen (`groups[]`), KS-Presets (`ks_presets[]`), Frequenz-Arrays (`c_major_freqs[]`, `ks_scale_freqs[]`), Timing-Konstanten. Daten getrennt von Sequencer-Logik.
 - **output**: Kapselt SAI1/I2S/DMA. Umschaltbarer Funktionspointer `fill_buffer_fn` für Audio-Quellenwahl per Dependency Injection. DMA-Callbacks rufen die aktive Quelle. API: `output_init(fill_buffer_fn)`, `output_set_source(fn)`.
-- **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → synthesis → karplus → output(synthesis_fill_buffer) → player), non-blocking Main-Loop (`player_update()` + beat-synchrone LED).
+- **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → input → synthesis → karplus → output(synthesis_fill_buffer) → player), non-blocking Main-Loop (Gate-Polling → `player_note_on()`/`player_note_off()` + beat-synchrone LED).
 
 ### Clock-Konfiguration
 

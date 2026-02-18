@@ -30,7 +30,8 @@ typedef enum {
 } player_group_t;
 
 void player_init(player_group_t group);
-void player_update(void);
+void player_note_on(void);
+void player_note_off(void);
 uint8_t player_beat_pending(void);
 
 #endif /* PLAYER_H */

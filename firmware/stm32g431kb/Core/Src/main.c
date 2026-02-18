@@ -3,6 +3,7 @@
 #include "karplus.h"
 #include "output.h"
 #include "player.h"
+#include "input.h"
 
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
@@ -12,6 +13,7 @@ int main(void)
     HAL_Init();
     SystemClock_Config();
     GPIO_Init();
+    input_init();
     synthesis_init();
     karplus_init();
     output_init(synthesis_fill_buffer);
@@ -19,9 +21,15 @@ int main(void)
 
     while (1)
     {
-        player_update();
-        if (player_beat_pending())
+        if (input_gate_on_pending()) {
+            player_note_on();
+        }
+        if (input_gate_off_pending()) {
+            player_note_off();
+        }
+        if (player_beat_pending()) {
             HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
+        }
     }
 }
 
