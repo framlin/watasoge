@@ -72,7 +72,7 @@ Applikationsmodule:
 - **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), Dual-Envelope
 - **karplus** (`karplus.c/.h`) — Karplus-Strong String Synthesis: nutzt `svf.h` und `delay_line.h` für DSP-Bausteine, Allpass-Dispersion, Curved Bridge, Noise-Burst-Excitation, Per-Sample-Parameterinterpolation
 - **player** (`player.c/.h`) — Gate-gesteuerter Sequencer: 21 Instrumentengruppen (11 Wavetable + 10 KS), automatische Quellenwahl, `player_note_on()`/`player_note_off()` API
-- **player_config** (`player_config.c/.h`) — Gruppen-Definitionen, KS-Presets, Frequenz-Arrays (Daten getrennt von Logik)
+- **player_config** (`player_config.c/.h`) — Gruppen-Definitionen, KS-Presets, Frequenz-Arrays, Note-Count-Konstanten (Daten getrennt von Logik)
 - **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, umschaltbarer Funktionspointer (`fill_buffer_fn`) per Dependency Injection
 - **main** (`main.c`) — Orchestrierung: Clock, GPIO, Input-Init, non-blocking Main-Loop (Gate-Polling → Player + beat-synchrone LED)
 

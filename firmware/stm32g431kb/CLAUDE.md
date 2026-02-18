@@ -44,7 +44,7 @@ stm32g431kb/
 │   │   ├── synthesis.h          # synthesis_init(), fill_buffer(), set_frequency/wave/mute/decay(), trigger()
 │   │   ├── karplus.h            # karplus_init(), fill_buffer(), set_frequency/damping/brightness/dispersion(), trigger()
 │   │   ├── player.h             # player_group_t enum (21 Gruppen), player_init(group), note_on(), note_off(), beat_pending()
-│   │   ├── player_config.h      # group_def_t, ks_params_t, Timing-Konstanten, extern-Deklarationen
+│   │   ├── player_config.h      # group_def_t, ks_params_t, Note-Count-Konstanten, extern-Deklarationen
 │   │   ├── output.h             # output_init(fill_buffer_fn), output_set_source(fill_buffer_fn)
 │   │   ├── stm32g4xx_hal_conf.h # HAL-Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI
 │   │   ├── wavetables_integrated.h # 220 integrierte Wavetables (MI-Plaits-Stil, ~58 KB)
@@ -94,7 +94,7 @@ main.c  ──init──→  input.c           (Gate-Eingang PA0, EXTI)
 - **karplus**: Karplus-Strong String Synthesis nach MI Rings/Plaits-Vorbild. Nutzt `svf.h` für Loop-Filter und Excitation-Filter, `delay_line.h` für Ringbuffer-Operationen. RT60-basiertes Decay, Allpass-Dispersion (256 floats) für Inharmonizität, Curved-Bridge-Nichtlinearität für Sitar-Buzz, DC-Blocker, Stabilitäts-Clamp, Noise-Burst-Excitation (XorShift32 PRNG), Per-Sample-Parameterinterpolation, SVF-Delay-Kompensation per LUT. API: `karplus_fill_buffer()`, `karplus_set_frequency()`, `karplus_set_damping()`, `karplus_set_brightness()`, `karplus_set_dispersion()`, `karplus_trigger()`.
 - **input** (`input.c/.h`): Gate-Eingang PA0 als EXTI (Rising+Falling, Pulldown). `HAL_GPIO_EXTI_Callback()` setzt volatile Flags. Polling-API: `input_gate_on_pending()`, `input_gate_off_pending()`. NVIC-Priorität 5.
 - **player**: Gate-gesteuerter Sequencer. Steuert 21 Instrumentengruppen, schaltet automatisch die Audio-Quelle in output um. Beat-Flag für LED-Synchronisation. API: `player_init(group)`, `player_note_on()`, `player_note_off()`, `player_beat_pending()`. Note-OFF mutet melodische Wavetables und rückt Note-Counter vor; perkussive/KS klingen natürlich aus.
-- **player_config** (`player_config.c/.h`): Gruppen-Definitionen (`groups[]`), KS-Presets (`ks_presets[]`), Frequenz-Arrays (`c_major_freqs[]`, `ks_scale_freqs[]`), Timing-Konstanten. Daten getrennt von Sequencer-Logik.
+- **player_config** (`player_config.c/.h`): Gruppen-Definitionen (`groups[]`), KS-Presets (`ks_presets[]`), Frequenz-Arrays (`c_major_freqs[]`, `ks_scale_freqs[]`), Note-Count-Konstanten. Daten getrennt von Sequencer-Logik.
 - **output**: Kapselt SAI1/I2S/DMA. Umschaltbarer Funktionspointer `fill_buffer_fn` für Audio-Quellenwahl per Dependency Injection. DMA-Callbacks rufen die aktive Quelle. API: `output_init(fill_buffer_fn)`, `output_set_source(fn)`.
 - **main**: Initialisierungsreihenfolge (HAL → Clock → GPIO → input → synthesis → karplus → output(synthesis_fill_buffer) → player), non-blocking Main-Loop (Gate-Polling → `player_note_on()`/`player_note_off()` + beat-synchrone LED).
 

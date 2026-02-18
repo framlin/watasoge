@@ -18,18 +18,10 @@ typedef struct {
     float dispersion;
 } ks_params_t;
 
-/* --- Timing constants --- */
+/* --- Note counts --- */
 
 #define MELODY_NOTES     8
-#define MELODY_ON_MS     1000
-#define MELODY_OFF_MS    250
-
 #define PERC_HITS        16
-#define PERC_BEAT_MS     500
-
-#define KS_NOTE_MS       1500
-#define KS_PAUSE_MS      300
-#define KS_PERC_BEAT_MS  500
 #define KS_PERC_HITS     16
 
 /* --- Data (defined in player_config.c) --- */
