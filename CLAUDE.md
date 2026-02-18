@@ -22,7 +22,7 @@ watasoge/
         ├── Core/
         │   ├── Inc/               # main.h, input.h, synthesis.h, karplus.h, player.h, player_config.h, output.h, audio_config.h, svf.h, delay_line.h, hal_conf.h, it.h, wavetables_integrated.h
         │   └── Src/               # main.c, input.c, synthesis.c, karplus.c, player.c, player_config.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
-        └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
+        └── Drivers/               # Symlink → <STM32Cube_FW_G4>/Drivers
 ```
 
 ## Hardware
@@ -38,7 +38,7 @@ Die Datei `firmware/stm32g431kb/Core/Inc/wavetables_integrated.h` enthält 220 W
 - **Format:** 128 Samples + 4 Guard, int16_t, integriert (kumulative Summe)
 - **Bank A:** 64 Waves — additive Synthese (Sinus, Comb, Quadra, Tri-Stack, Drawbars, Formant, Digital-Formant, Pulse)
 - **Bank B:** 156 Waves — aus Audio-Samples extrahiert (Sub-Bass, Bass, Stabs, Pads, Gitarre, Kicks, Claps, Snares, HiHats)
-- **Quelle:** Generiert in `~/tinker/audio-samples/` via `generate_integrated_wavetables.py`
+- **Quelle:** Generiert via `generate_integrated_wavetables.py`
 
 ## Projektstand
 
@@ -112,12 +112,3 @@ Projektspezifische Skills unter `.claude/skills/`:
 | **ucflash** | Firmware flashen via OpenOCD auf NUCLEO-G431KB |
 | **deploy** | Deployment-Branch erstellen/aktualisieren: persönliche Pfade entfernen, Push auf Gitea + GitHub |
 
-## Externe Referenzen
-
-| Ressource | Pfad | Inhalt |
-|---|---|---|
-| Hersteller-PDFs | `~/tinker/mcu-docs/` | Datasheets, Reference Manuals, Programming Manuals |
-| MCU-Wissensbasis | `~/obsidian/mcu.zettelkasten/` | Aufbereitete Notizen zu STM32G4, RP2040, Peripherals, Toolchains |
-| Audio-Samples | `~/tinker/audio-samples/` | Wavetable-Generierung, MI-Referenzcode, Playback-Dokumentation |
-| MI-Quellcode | `~/tinker/mutable_instruments/MI_eurorack_git/` | Rings/Plaits KS-Referenzimplementierung (MIT-Lizenz) |
-| Watasoge-Zettelkasten | `~/obsidian/watasoge.zettelkasten/` | Implementierungspläne, Projektnotizen |

@@ -62,7 +62,7 @@ stm32g431kb/
 │       ├── system_stm32g4xx.c   # SystemInit (FPU), SystemCoreClockUpdate
 │       ├── syscalls.c           # Newlib Stubs
 │       └── sysmem.c             # _sbrk
-└── Drivers/                     # Symlink → ~/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers
+└── Drivers/                     # Symlink → <STM32Cube_FW_G4>/Drivers
 ```
 
 ### Modul-Architektur
@@ -113,7 +113,7 @@ openocd -f board/st_nucleo_g4.cfg -c "program build/Debug/blinky.elf verify rese
 ### Abhängigkeiten
 
 - **Toolchain:** arm-none-eabi-gcc 10.3 (Homebrew)
-- **HAL:** STM32Cube_FW_G4_V1.6.1 (`~/STM32Cube/Repository/`)
+- **HAL:** STM32Cube_FW_G4_V1.6.1
 - **Build:** CMake 3.22+, Ninja
 - **Flash:** OpenOCD mit ST-LINK V3
 
@@ -160,35 +160,6 @@ Physical-Modelling-Synthese nach MI Rings/Plaits (Plaits-Variante als Vorlage).
 - **CORDIC**: Hardware-Beschleuniger für trigonometrische Funktionen
 - **FMAC**: Filter Math Accelerator — potenziell nutzbar für Tiefpass-Filterung
 
-## Dokumentation
-
-### Lokale Hersteller-PDFs (`~/tinker/mcu-docs/stm32g431kb/`)
-
-| Dokument | Datei | Inhalt |
-|---|---|---|
-| Datasheet | `stm32g431kb-datasheet.pdf` | Pinout, elektrische Spezifikationen, Peripherie-Übersicht |
-| Reference Manual | `rm0440-reference-manual.pdf` | Register-Beschreibungen aller Peripherie (SAI, DMA, TIM, etc.) |
-| Programming Manual | `pm0214-programming-manual.pdf` | Cortex-M4 Instruction Set, NVIC, SysTick, FPU |
-| Board User Manual | `nucleo-g431kb-user-manual.pdf` | NUCLEO-G431KB Schaltplan, Jumper-Konfiguration, Pin-Mapping |
-
-### Wissensbasis (`~/obsidian/mcu.zettelkasten/`)
-
-Obsidian-Zettelkasten mit Topic-Struktur für MCU-Wissen. Relevante Topics:
-
-- `io/output/topics/STM32G4.md` — Notizen zur STM32G4-Serie
-- `io/output/topics/Peripherals.md` — Peripherie-Notizen (SAI, DMA, Timer)
-- `io/output/topics/Toolchains.md` — Build-Toolchains, Debugger
-
-### Wavetable-Referenzen (`~/tinker/audio-samples/`)
-
-| Datei | Inhalt |
-|---|---|
-| `INTEGRATED_WAVETABLE_PLAYBACK.md` | Playback-Algorithmus, Startup-Transient-Fix, Guard-Sample-Drift |
-| `NOTES.md` | Wavetable-Extraktion, MI-Analyse, Speicherbudget |
-| `mi-reference/plaits_wavetable_oscillator.h` | Mutable Instruments Plaits — Differentiator, Hermite, Oszillator |
-| `mi-reference/plaits_wavetable_engine.cc` | Plaits — 8x8x3 Wave-Terrain, trilineare Interpolation |
-| `generate_integrated_wavetables.py` | Generator-Script für die integrierten Wavetables |
-
 ## Playback-Algorithmus (implementiert in `synthesis.c`)
 
 Pipeline pro Sample: Phase-Accumulator → Hermite-Interpolation → Differenzierung → One-Pole-LP → Skalierung → Gain-Envelope → int16
@@ -211,8 +182,6 @@ scale = 1.0f / (f0 * 131072.0f);
 // Pro Sample:
 // phase [0,1) → Hermite über 4 Tabellenwerte → Differenzierung → LP → scale × 24000 × g → int16
 ```
-
-Siehe `~/tinker/audio-samples/INTEGRATED_WAVETABLE_PLAYBACK.md` für Details zu bekannten Fallstricken.
 
 ## Karplus-Strong Algorithmus (implementiert in `karplus.c`)
 

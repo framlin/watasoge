@@ -36,7 +36,7 @@ firmware/stm32g431kb/
 │       ├── system_stm32g4xx.c       # SystemInit, SystemCoreClockUpdate
 │       ├── syscalls.c               # Newlib Stubs
 │       └── sysmem.c                 # _sbrk
-└── Drivers/                         # Symlink → ~/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers
+└── Drivers/                         # Symlink → <STM32Cube_FW_G4>/Drivers
 ```
 
 ## Hardware
@@ -119,7 +119,7 @@ Linker: `--specs=nano.specs -Wl,--gc-sections -lc -lm -lnosys`
 
 ## Wichtige Hinweise
 
-- **Drivers-Symlink:** Zeigt auf `~/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers`.
+- **Drivers-Symlink:** Zeigt auf `<STM32Cube_FW_G4>/Drivers`.
   Nicht löschen oder durch Kopie ersetzen.
 - **syscalls.c:** Enthält keine `_exit`-Funktion — diese wird von `libnosys` bereitgestellt.
   Keine eigene `_exit` hinzufügen, sonst gibt es Multiple-Definition-Fehler beim Linken.
@@ -133,5 +133,3 @@ Linker: `--specs=nano.specs -Wl,--gc-sections -lc -lm -lnosys`
 - HAL-Quelldateien: `Drivers/STM32G4xx_HAL_Driver/Src/`
 - HAL-Header: `Drivers/STM32G4xx_HAL_Driver/Inc/`
 - CMSIS-Header: `Drivers/CMSIS/Device/ST/STM32G4xx/Include/`
-- Hersteller-PDFs: `~/tinker/mcu-docs/stm32g431kb/`
-- MCU-Wissensbasis: `~/obsidian/mcu.zettelkasten/`

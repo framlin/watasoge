@@ -77,7 +77,7 @@ rm -rf build/Debug && cmake --preset Debug && cmake --build build/Debug
 
 ## Toolchain-Voraussetzungen
 
-- **arm-none-eabi-gcc** 10.3 (`/opt/homebrew/bin/arm-none-eabi-gcc`)
+- **arm-none-eabi-gcc** 10.3
 - **CMake** ≥ 3.22
 - **Ninja** Build-System
 

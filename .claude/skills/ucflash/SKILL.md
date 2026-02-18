@@ -22,14 +22,14 @@ Flasht die kompilierte Firmware auf das NUCLEO-G431KB Board.
 
 ```bash
 openocd -f board/st_nucleo_g4.cfg \
-  -c "program /Users/framlin/tinker/watasoge/firmware/stm32g431kb/build/Debug/blinky.elf verify reset exit"
+  -c "program build/Debug/blinky.elf verify reset exit"
 ```
 
 Für Release-Build:
 
 ```bash
 openocd -f board/st_nucleo_g4.cfg \
-  -c "program /Users/framlin/tinker/watasoge/firmware/stm32g431kb/build/Release/blinky.elf verify reset exit"
+  -c "program build/Release/blinky.elf verify reset exit"
 ```
 
 ## Ablauf im Skill
