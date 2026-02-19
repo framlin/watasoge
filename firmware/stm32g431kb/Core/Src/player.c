@@ -43,15 +43,14 @@ static void start_note(void)
     if (is_ks_group()) {
         if (is_percussive()) {
             karplus_set_frequency(grp->freq);
-        } else {
-            karplus_set_frequency(ks_scale_freqs[current_note]);
         }
+        /* Melodische KS: Frequenz wird von player_set_pitch() gesetzt */
         karplus_trigger();
     } else if (is_percussive()) {
         synthesis_set_frequency(grp->freq);
         synthesis_trigger();
     } else {
-        synthesis_set_frequency(c_major_freqs[current_note]);
+        /* Melodische Wavetable: Frequenz wird von player_set_pitch() gesetzt */
         synthesis_set_mute(0);
     }
     beat_flag = 1;
@@ -72,8 +71,6 @@ static void advance_wave(void)
 
     if (!is_ks_group()) {
         synthesis_set_wave(current_wave);
-        if (!is_percussive())
-            synthesis_set_frequency(c_major_freqs[0]);
     }
 }
 
@@ -99,6 +96,19 @@ void player_init(player_group_t group)
 
     if (!is_ks_group()) {
         synthesis_set_wave(grp->start);
+    }
+}
+
+void player_set_pitch(float freq_hz)
+{
+    if (is_ks_group()) {
+        if (!is_percussive()) {
+            karplus_set_frequency(freq_hz);
+        }
+    } else {
+        if (!is_percussive()) {
+            synthesis_set_frequency(freq_hz);
+        }
     }
 }
 

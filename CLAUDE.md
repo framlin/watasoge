@@ -57,24 +57,33 @@ Karplus-Strong Synthese nach Mutable Instruments Rings/Plaits-Vorbild. Erzeugt g
 - **Parameter:** Frequency, Damping (RT60-basiert), Brightness (SVF-Cutoff), Dispersion [-1..+1]
 - **RAM-Bedarf:** ~5,2 KB (Delay-Lines + State)
 
+### 3. Pitch-CV Eingang (auf Hardware verifiziert)
+
+1V/Octave Pitch-CV-Eingang über internen 12-Bit ADC (ADC1, Kanal 2, PA1). Polling-Modus: ADC wird bei Gate-ON gelesen, Umrechnung in Frequenz via `freq = 32.703 * exp2f(voltage)`. Bereich C1 (~32.7 Hz bei 0V) bis ~D#4 (~311 Hz bei 3.3V). Zwischenlösung bis externer 16-Bit-ADC verfügbar.
+
+- **Gate (PA0)** bestimmt WANN (Note-ON/OFF)
+- **CV (PA1)** bestimmt WELCHE TONHÖHE (1V/Oct)
+- **Player** bestimmt WELCHER KLANG (Wave, Engine, Parameter)
+
 Player-Modul spielt alle Waves sequenziell ab, gate-gesteuert über PA0, gruppiert in 21 Instrumentengruppen:
-- **Wavetable-Gruppen (11 Gruppen):** Melodisch (6 Gruppen, Waves 0–115) mit C-Dur-Tonleiter C1–C2, perkussiv (5 Gruppen, Waves 116–219) mit Decay-Envelope
-- **KS-Melodisch (4 Gruppen):** KS_STRING (warm), KS_BRIGHT (brillant), KS_INHARMONIC (Glocken), KS_SITAR (Buzz) — C-Dur-Tonleiter C3–C4
+- **Wavetable-Gruppen (11 Gruppen):** Melodisch (6 Gruppen, Waves 0–115), perkussiv (5 Gruppen, Waves 116–219) mit Decay-Envelope
+- **KS-Melodisch (4 Gruppen):** KS_STRING (warm), KS_BRIGHT (brillant), KS_INHARMONIC (Glocken), KS_SITAR (Buzz)
 - **KS-Perkussiv (6 Gruppen):** KS_KICK (C2, tief), KS_SNARE (A3, Curved Bridge), KS_HIHAT (E6, metallisch), KS_TOM (G2, resonant), KS_COWBELL (E5, inharmonisch), KS_CLAVE (A5, holzig)
-- **Gate-Steuerung:** Steigende Flanke an PA0 → Note-ON, fallende Flanke → Note-OFF (melodische Wavetables werden gemutet, perkussive/KS klingen natürlich aus), Note-Counter rückt bei Gate-OFF vor
+- **Gate-Steuerung:** Steigende Flanke an PA0 → ADC-Lesung → Pitch setzen → Note-ON, fallende Flanke → Note-OFF (melodische Gruppen werden gemutet, perkussive/KS klingen natürlich aus), Note-Counter rückt bei Gate-OFF vor
+- **Pitch-CV:** Melodische Gruppen erhalten Tonhöhe vom CV-Eingang, perkussive Gruppen verwenden weiterhin feste Frequenzen
 - Audio-Quelle wird automatisch zwischen Wavetable und Karplus-Strong umgeschaltet (`output_set_source()`)
 - LED blinkt synchron zu den Note-ON-Events
 
 Firmware modularisiert in Applikations- und DSP-Infrastruktur-Module:
 
 Applikationsmodule:
-- **input** (`input.c/.h`) — Gate-Eingang: PA0 als EXTI (Rising+Falling, Pulldown), volatile Flags, Polling-API (`input_gate_on_pending()`, `input_gate_off_pending()`)
+- **input** (`input.c/.h`) — Gate-Eingang (PA0, EXTI) + Pitch-CV-Eingang (PA1, ADC1 Kanal 2, 12-Bit, Polling). Gate: volatile Flags, `input_gate_on_pending()`, `input_gate_off_pending()`. CV: `input_pitch_cv()` liest ADC und gibt Frequenz in Hz zurück (1V/Oct, C1=32.703 Hz bei 0V)
 - **synthesis** (`synthesis.c/.h`) — Signalerzeugung: Integrated Wavetable Playback (Hermite, Differentiator, adaptiver LP), Dual-Envelope
 - **karplus** (`karplus.c/.h`) — Karplus-Strong String Synthesis: nutzt `svf.h` und `delay_line.h` für DSP-Bausteine, Allpass-Dispersion, Curved Bridge, Noise-Burst-Excitation, Per-Sample-Parameterinterpolation
-- **player** (`player.c/.h`) — Gate-gesteuerter Sequencer: 21 Instrumentengruppen (11 Wavetable + 10 KS), automatische Quellenwahl, `player_note_on()`/`player_note_off()` API
+- **player** (`player.c/.h`) — Gate-gesteuerter Sequencer: 21 Instrumentengruppen (11 Wavetable + 10 KS), automatische Quellenwahl, `player_note_on()`/`player_note_off()`/`player_set_pitch()` API
 - **player_config** (`player_config.c/.h`) — Gruppen-Definitionen, KS-Presets, Frequenz-Arrays, Note-Count-Konstanten (Daten getrennt von Logik)
 - **output** (`output.c/.h`) — Audio-Ausgabe: SAI/DMA-Konfiguration, umschaltbarer Funktionspointer (`fill_buffer_fn`) per Dependency Injection
-- **main** (`main.c`) — Orchestrierung: Clock, GPIO, Input-Init, non-blocking Main-Loop (Gate-Polling → Player + beat-synchrone LED)
+- **main** (`main.c`) — Orchestrierung: Clock, GPIO, Input-Init, non-blocking Main-Loop (Gate-ON → CV lesen → Pitch setzen → Note-ON; Gate-OFF → Note-OFF; beat-synchrone LED)
 
 DSP-Infrastruktur (Inline-Header):
 - **audio_config** (`audio_config.h`) — Gemeinsame Konstanten: `SAMPLE_RATE`, `OUTPUT_GAIN`, `PI_F`
@@ -87,10 +96,11 @@ Technische Details:
 - **Karplus-Strong:** Ringbuffer-Delay-Line (1024 floats) + Allpass (256 floats), Hermite-Interpolation, ZDF-SVF Lowpass, RT60-basiertes Decay, SVF-Delay-Kompensation per LUT, DC-Blocker, Stabilitäts-Clamp
 - **Gain-Envelope:** Dual-Modus: Smoothstep-Fade für Sustain, exponentieller Decay für Perkussion
 - **DMA:** Circular-DMA (DMA1 Channel1), Half-/Complete-Callbacks für lückenloses Streaming
-- **Pins:** PA0 (Gate-Input, EXTI), PA8 (SCK), PA9 (FS/LRCLK), PA10 (SD/DATA)
+- **Pitch-CV:** ADC1 Kanal 2 (PA1), 12-Bit, Single-Conversion, Synchron-Takt (PCLK/4 = 42.5 MHz), Polling bei Gate-ON, 1V/Oct-Umrechnung (`CV_BASE_FREQ * exp2f(volts)`)
+- **Pins:** PA0 (Gate-Input, EXTI), PA1 (Pitch-CV, ADC1_CH2, Analog), PA8 (SCK), PA9 (FS/LRCLK), PA10 (SD/DATA)
 - **Systemtakt:** 170 MHz (HSI 16 MHz → PLL, PLLM=4, PLLN=85, PLLR=2)
 - **Build-System:** CMake 3.22 + Ninja, arm-none-eabi-gcc 10.3
-- **HAL:** STM32Cube_FW_G4_V1.6.1 (via Symlink)
+- **HAL:** STM32Cube_FW_G4_V1.6.1 (via Symlink), Module: GPIO, RCC, FLASH, PWR, CORTEX, DMA, EXTI, SAI, ADC
 
 ### Build & Flash
 

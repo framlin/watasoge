@@ -32,6 +32,7 @@
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 #define HAL_SAI_MODULE_ENABLED
+#define HAL_ADC_MODULE_ENABLED
 
 /* ########################## Register Callbacks selection ################# */
 #define USE_HAL_ADC_REGISTER_CALLBACKS        0U
@@ -143,6 +144,11 @@
 #ifdef HAL_SAI_MODULE_ENABLED
 #include "stm32g4xx_hal_sai.h"
 #endif /* HAL_SAI_MODULE_ENABLED */
+
+#ifdef HAL_ADC_MODULE_ENABLED
+#include "stm32g4xx_hal_adc.h"
+#include "stm32g4xx_hal_adc_ex.h"
+#endif /* HAL_ADC_MODULE_ENABLED */
 
 #ifdef  USE_FULL_ASSERT
 #define assert_param(expr) ((expr) ? (void)0U : assert_failed((uint8_t *)__FILE__, __LINE__))

@@ -32,6 +32,7 @@ typedef enum {
 void player_init(player_group_t group);
 void player_note_on(void);
 void player_note_off(void);
+void player_set_pitch(float freq_hz);
 uint8_t player_beat_pending(void);
 
 #endif /* PLAYER_H */

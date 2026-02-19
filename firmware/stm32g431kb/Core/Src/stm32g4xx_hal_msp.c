@@ -18,6 +18,20 @@ void HAL_MspInit(void)
     HAL_PWREx_DisableUCPDDeadBattery();
 }
 
+void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
+{
+    if (hadc->Instance == ADC1) {
+        __HAL_RCC_ADC12_CLK_ENABLE();
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+
+        GPIO_InitTypeDef gpio = {0};
+        gpio.Pin  = GPIO_PIN_1;
+        gpio.Mode = GPIO_MODE_ANALOG;
+        gpio.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init(GPIOA, &gpio);
+    }
+}
+
 void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};

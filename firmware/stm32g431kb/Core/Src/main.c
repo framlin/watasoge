@@ -17,11 +17,13 @@ int main(void)
     synthesis_init();
     karplus_init();
     output_init(synthesis_fill_buffer);
-    player_init(GROUP_KS_KICK);
+    player_init(GROUP_KS_STRING);
 
     while (1)
     {
         if (input_gate_on_pending()) {
+            float freq = input_pitch_cv();
+            player_set_pitch(freq);
             player_note_on();
         }
         if (input_gate_off_pending()) {
