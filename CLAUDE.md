@@ -73,21 +73,3 @@ Projektspezifische Skills unter `.claude/skills/`:
 | Audio-Samples | `~/tinker/audio-samples/` | Wavetable-Generierung, MI-Referenzcode, Playback-Dokumentation |
 | MI-Quellcode | `~/tinker/mutable_instruments/MI_eurorack_git/` | Rings/Plaits KS-Referenzimplementierung (MIT-Lizenz) |
 | Watasoge-Zettelkasten | `~/obsidian/watasoge.zettelkasten/` | Implementierungspläne, Projektnotizen |
-
-## Coding-Wissensbasis
-
-Vor Beginn einer Coding-Aufgabe immer den Watasoge-Zettelkasten nach relevanten Notes mit dem Topic **Coding** durchsuchen. Vorgehen:
-
-1. **Überblick verschaffen:** Alle Notes mit Topic `Coding` finden und deren Frontmatter (insbesondere Aliases) lesen. Notes vom Typ `Topic_Note` ignorieren — sie sind nur Platzhalter.
-   ```bash
-   grep -rl '\[\[Coding\]\]' ~/obsidian/watasoge.zettelkasten/io/input/ ~/obsidian/watasoge.zettelkasten/mem/ 2>/dev/null \
-     | xargs grep -L 'type:.*Topic_Note' \
-     | while read f; do echo "=== $f ==="; sed -n '1,/^---$/{ /^---$/!p; /^---$/p }; /^---$/,/^---$/p' "$f" | head -10; done
-   ```
-   Entscheidend sind die `aliases`-Felder — sie beschreiben den Inhalt der jeweiligen Note (z.B. `FMAC-Usage`, `SAI_DMA`, `Karplus-Strong`).
-
-2. **Relevante Notes identifizieren:** Anhand der Aliases entscheiden, welche Notes zur aktuellen Aufgabe passen. Beispiel: Bei einer Filter-Implementierung sind Notes mit Alias `FMAC` relevant, bei Audio-Ausgabe solche mit `SAI` oder `DMA`.
-
-3. **Notes lesen:** Die als relevant identifizierten Notes vollständig lesen, bevor mit der Planung oder Implementierung begonnen wird.
-
-Dieser Schritt gehört in die Planungsphase jeder Coding-Aufgabe und stellt sicher, dass bereits erarbeitetes Wissen (Registerdetails, Fallstricke, Designentscheidungen) nicht verloren geht.
