@@ -53,6 +53,23 @@ Firmware modular aufgebaut: `input`, `synthesis`, `karplus`, `player`, `player_c
 
 Details zu Modulen, Signalfluss, Algorithmen und Peripherie-Konfiguration: siehe `firmware/stm32g431kb/CLAUDE.md`.
 
+### Geplant: Migration auf fracanto-Framework
+
+Watasoge soll als fracanto-Modul laufen und ausschließlich CAN-CV-Daten als Input verarbeiten (kein lokaler Gate/CV-Eingang mehr). Migrationsplan in 6 Phasen:
+
+0. Build-Integration (fracanto als Submodul, CMake)
+1. Audio-Pipeline auf `fracanto_audio_pipeline_t` + PCM5102-Treiber umstellen
+2. Module-Ops implementieren (`fracanto_module_ops_t`-Vtable)
+3. Lokale Eingabe durch CAN-Input ersetzen (`input.c` entfernen)
+4. Parameter-System aufbauen (`fracanto_param_t`)
+5. CAN-Bus-Integration abschließen (FDCAN, Node-Discovery, Heartbeat)
+
+Ressourcenanalyse:
+- **Flash:** ~33–38 KB Firmware nach Migration, ~90–95 KB für Wavetables → ~340 Wavetables möglich (aktuell 220)
+- **RAM:** ~11,3 KB belegt nach Migration, ~21,5 KB frei (65,6% von 32 KB)
+
+Detaillierter Plan und Actions: siehe `~/obsidian/watasoge.zettelkasten/` (Projekt: *Watasoge nach fracanto migrieren*).
+
 ## Skills
 
 Projektspezifische Skills unter `.claude/skills/`:
@@ -72,4 +89,5 @@ Projektspezifische Skills unter `.claude/skills/`:
 | MCU-Wissensbasis | `~/obsidian/mcu.zettelkasten/` | Aufbereitete Notizen zu STM32G4, RP2040, Peripherals, Toolchains |
 | Audio-Samples | `~/tinker/audio-samples/` | Wavetable-Generierung, MI-Referenzcode, Playback-Dokumentation |
 | MI-Quellcode | `~/tinker/mutable_instruments/MI_eurorack_git/` | Rings/Plaits KS-Referenzimplementierung (MIT-Lizenz) |
-| Watasoge-Zettelkasten | `~/obsidian/watasoge.zettelkasten/` | Implementierungspläne, Projektnotizen |
+| fracanto-Framework | `~/tinker/fracanto/` | Dreischichtiges C-Framework für CAN-Bus-vernetzte Eurorack-Module |
+| Watasoge-Zettelkasten | `~/obsidian/watasoge.zettelkasten/` | Implementierungspläne, Projektnotizen, Migrationsplan |
