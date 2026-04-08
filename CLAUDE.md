@@ -1,8 +1,11 @@
 # Watasoge
 
-## Projektübersicht
+Wavetable-basierter Klangerzeuger (Synthesizer) für Eurorack. Entwicklungsplattform: **NUCLEO-G431KB** (STM32G431KB). Audio-DAC: PCM5102.
 
-Wavetable-basierter Klangerzeuger (Synthesizer) für Eurorack. Entwicklungsplattform ist bis auf Weiteres das **NUCLEO-G431KB** (STM32G431KB). Audio-DAC: PCM5102.
+## Projektspezifisch
+
+- Zettelkasten: `watasoge.zettelkasten` (Gitea: mbaaba/watasoge.zettelkasten)
+- Projektstand und Details: `~/obsidian/watasoge.zettelkasten/PROJECT.md`
 
 ## Projektstruktur
 
@@ -20,8 +23,8 @@ watasoge/
         ├── STM32G431KBTX_FLASH.ld # Linker-Script
         ├── startup_stm32g431xx.s  # Startup (Kopie aus STM32Cube Repo)
         ├── Core/
-        │   ├── Inc/               # main.h, input.h, synthesis.h, karplus.h, player.h, player_config.h, output.h, audio_config.h, svf.h, delay_line.h, hal_conf.h, it.h, wavetables_integrated.h
-        │   └── Src/               # main.c, input.c, synthesis.c, karplus.c, player.c, player_config.c, output.c, it.c, hal_msp.c, system, syscalls, sysmem
+        │   ├── Inc/               # Header-Dateien
+        │   └── Src/               # Quellcode
         └── Drivers/               # Symlink → ~/STM32Cube/Repository/.../Drivers
 ```
 
@@ -30,45 +33,6 @@ watasoge/
 - **MCU:** STM32G431KB (Cortex-M4F, 170 MHz, 128 KB Flash, 32 KB RAM)
 - **Board:** NUCLEO-G431KB
 - **Audio-DAC:** PCM5102, 16-Bit, 44.1 kHz, I2S via SAI
-
-## Wavetable-Daten
-
-Die Datei `firmware/stm32g431kb/Core/Inc/wavetables_integrated.h` enthält 220 Wavetables im Integrated-Wavetable-Synthesis-Format (Franck & Välimäki, DAFx-12 / Mutable Instruments Plaits):
-
-- **Format:** 128 Samples + 4 Guard, int16_t, integriert (kumulative Summe)
-- **Bank A:** 64 Waves — additive Synthese (Sinus, Comb, Quadra, Tri-Stack, Drawbars, Formant, Digital-Formant, Pulse)
-- **Bank B:** 156 Waves — aus Audio-Samples extrahiert (Sub-Bass, Bass, Stabs, Pads, Gitarre, Kicks, Claps, Snares, HiHats)
-- **Quelle:** Generiert in `~/tinker/audio-samples/` via `generate_integrated_wavetables.py`
-
-## Projektstand
-
-Zwei Synthese-Engines, beide auf Hardware verifiziert:
-
-- **Integrated Wavetable Playback:** 220 Wavetables (MI-Plaits-Pipeline), Hermite-Interpolation, Differenzierung + One-Pole-LP
-- **Karplus-Strong String Synthesis:** Physical Modelling nach MI Rings/Plaits, Delay-Line + ZDF-SVF + Allpass-Dispersion
-
-Gate-gesteuerter Player mit Pitch-CV-Eingang (PA0 Gate/EXTI, PA1 CV/ADC1, 1V/Oct). 21 Instrumentengruppen (11 Wavetable, 4 KS-melodisch, 6 KS-perkussiv). Audio-Ausgabe über SAI1/I2S an PCM5102-DAC via Circular-DMA.
-
-Firmware modular aufgebaut: `input`, `synthesis`, `karplus`, `player`, `player_config`, `output`, `main` (Applikation) + `audio_config`, `svf`, `delay_line` (DSP-Infrastruktur).
-
-Details zu Modulen, Signalfluss, Algorithmen und Peripherie-Konfiguration: siehe `firmware/stm32g431kb/CLAUDE.md`.
-
-### Geplant: Migration auf fracanto-Framework
-
-Watasoge soll als fracanto-Modul laufen und ausschließlich CAN-CV-Daten als Input verarbeiten (kein lokaler Gate/CV-Eingang mehr). Migrationsplan in 6 Phasen:
-
-0. Build-Integration (fracanto als Submodul, CMake)
-1. Audio-Pipeline auf `fracanto_audio_pipeline_t` + PCM5102-Treiber umstellen
-2. Module-Ops implementieren (`fracanto_module_ops_t`-Vtable)
-3. Lokale Eingabe durch CAN-Input ersetzen (`input.c` entfernen)
-4. Parameter-System aufbauen (`fracanto_param_t`)
-5. CAN-Bus-Integration abschließen (FDCAN, Node-Discovery, Heartbeat)
-
-Ressourcenanalyse:
-- **Flash:** ~33–38 KB Firmware nach Migration, ~90–95 KB für Wavetables → ~340 Wavetables möglich (aktuell 220)
-- **RAM:** ~11,3 KB belegt nach Migration, ~21,5 KB frei (65,6% von 32 KB)
-
-Detaillierter Plan und Actions: siehe `~/obsidian/watasoge.zettelkasten/` (Projekt: *Watasoge nach fracanto migrieren*).
 
 ## Skills
 
@@ -90,4 +54,3 @@ Projektspezifische Skills unter `.claude/skills/`:
 | Audio-Samples | `~/tinker/audio-samples/` | Wavetable-Generierung, MI-Referenzcode, Playback-Dokumentation |
 | MI-Quellcode | `~/tinker/mutable_instruments/MI_eurorack_git/` | Rings/Plaits KS-Referenzimplementierung (MIT-Lizenz) |
 | fracanto-Framework | `~/tinker/fracanto/` | Dreischichtiges C-Framework für CAN-Bus-vernetzte Eurorack-Module |
-| Watasoge-Zettelkasten | `~/obsidian/watasoge.zettelkasten/` | Implementierungspläne, Projektnotizen, Migrationsplan |
