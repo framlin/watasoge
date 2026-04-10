@@ -27,10 +27,7 @@ void DMA1_Channel1_IRQHandler(void)
     HAL_DMA_IRQHandler(&hdma_sai1a);
 }
 
-volatile uint8_t fdcan_irq_fired = 0;
-
 void FDCAN1_IT0_IRQHandler(void)
 {
-    fdcan_irq_fired = 1;
     HAL_FDCAN_IRQHandler(&hfdcan1);
 }

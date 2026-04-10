@@ -150,10 +150,21 @@ int main(void)
     fracanto_module_init(&mod, &can_hal, &node_cfg,
                           NULL, &watasoge_ops, &watasoge_ctx);
     fracanto_module_set_audio_pipeline(&mod, &audio_pipe);
+    /* Start CAN node — non-fatal: audio works even if CAN bus has issues.
+       Node stays in INIT state and won't process CAN messages until
+       the bus is healthy and module_start succeeds on retry. */
     fracanto_module_start(&mod);
 
-    /* Start audio */
-    fracanto_audio_pipeline_start(&audio_pipe);
+    /* Start audio pipeline (triggers DMA) */
+    if (fracanto_audio_pipeline_start(&audio_pipe) != 0)
+        Error_Handler();
+
+    /* Circular-DMA starts at out_buf[0]. fracanto_audio_pipeline_start()
+       sets active_idx=0, but the first Half-Complete would then write to
+       buffer[1] which DMA is currently reading. Setting active_idx=1
+       ensures the first tick writes to buffer[0] (just finished by DMA).
+       This is a watasoge-specific fix for the Circular-DMA override in
+       i2s_start_dma(). */
     audio_pipe.active_idx = 1;
 
     while (1)

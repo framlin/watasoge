@@ -4,3 +4,7 @@ build/
 # macOS
 .DS_Store
 .claude/settings.local.json
+firmware/stm32g431kb/tests/test_adsr
+firmware/stm32g431kb/tests/test_watasoge_module
+firmware/stm32g431kb/tests/*.dSYM/
+firmware/stm32g431kb/build/
