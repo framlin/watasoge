@@ -7,7 +7,9 @@
 
 #include "main.h"
 
-extern DMA_HandleTypeDef hdma_sai1a;
+/* SAI/DMA handles (global, referenziert von it.c und main.c via extern) */
+SAI_HandleTypeDef hsai1a;
+DMA_HandleTypeDef hdma_sai1a;
 
 void HAL_MspInit(void)
 {
@@ -16,20 +18,6 @@ void HAL_MspInit(void)
 
     /* Disable the internal Pull-Up in Dead Battery pins of UCPD peripheral */
     HAL_PWREx_DisableUCPDDeadBattery();
-}
-
-void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
-{
-    if (hadc->Instance == ADC1) {
-        __HAL_RCC_ADC12_CLK_ENABLE();
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-
-        GPIO_InitTypeDef gpio = {0};
-        gpio.Pin  = GPIO_PIN_1;
-        gpio.Mode = GPIO_MODE_ANALOG;
-        gpio.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOA, &gpio);
-    }
 }
 
 void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
@@ -70,5 +58,29 @@ void HAL_SAI_MspInit(SAI_HandleTypeDef *hsai)
 
         HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 2, 0);
         HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+    }
+}
+
+void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef *hfdcan)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    if (hfdcan->Instance == FDCAN1)
+    {
+        __HAL_RCC_FDCAN_CLK_ENABLE();
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+
+        /* PA11 = FDCAN1_RX (AF9)
+         * PA12 = FDCAN1_TX (AF9) */
+        GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN1;
+        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+        /* NVIC: DMA(2) > FDCAN(4) > SysTick(8) */
+        HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 4, 0);
+        HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
     }
 }

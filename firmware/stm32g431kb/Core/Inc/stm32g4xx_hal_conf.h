@@ -25,14 +25,13 @@
 /* ########################## Module Selection ############################## */
 #define HAL_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
-#define HAL_EXTI_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 #define HAL_SAI_MODULE_ENABLED
-#define HAL_ADC_MODULE_ENABLED
+#define HAL_FDCAN_MODULE_ENABLED
 
 /* ########################## Register Callbacks selection ################# */
 #define USE_HAL_ADC_REGISTER_CALLBACKS        0U
@@ -100,7 +99,7 @@
 
 /* ########################### System Configuration ######################## */
 #define  VDD_VALUE                   (3300UL)
-#define  TICK_INT_PRIORITY           (0UL)
+#define  TICK_INT_PRIORITY           (8UL)
 #define  USE_RTOS                     0U
 #define  PREFETCH_ENABLE              0U
 #define  INSTRUCTION_CACHE_ENABLE     1U
@@ -129,10 +128,6 @@
 #include "stm32g4xx_hal_cortex.h"
 #endif /* HAL_CORTEX_MODULE_ENABLED */
 
-#ifdef HAL_EXTI_MODULE_ENABLED
-#include "stm32g4xx_hal_exti.h"
-#endif /* HAL_EXTI_MODULE_ENABLED */
-
 #ifdef HAL_FLASH_MODULE_ENABLED
 #include "stm32g4xx_hal_flash.h"
 #endif /* HAL_FLASH_MODULE_ENABLED */
@@ -145,10 +140,9 @@
 #include "stm32g4xx_hal_sai.h"
 #endif /* HAL_SAI_MODULE_ENABLED */
 
-#ifdef HAL_ADC_MODULE_ENABLED
-#include "stm32g4xx_hal_adc.h"
-#include "stm32g4xx_hal_adc_ex.h"
-#endif /* HAL_ADC_MODULE_ENABLED */
+#ifdef HAL_FDCAN_MODULE_ENABLED
+#include "stm32g4xx_hal_fdcan.h"
+#endif /* HAL_FDCAN_MODULE_ENABLED */
 
 #ifdef  USE_FULL_ASSERT
 #define assert_param(expr) ((expr) ? (void)0U : assert_failed((uint8_t *)__FILE__, __LINE__))

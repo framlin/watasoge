@@ -5,13 +5,14 @@ project(blinky LANGUAGES C ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# --- MCU flags ---
+# --- MCU flags (global, gilt auch für Submodule) ---
 set(MCU_FLAGS
     -mthumb
     -mcpu=cortex-m4
     -mfpu=fpv4-sp-d16
     -mfloat-abi=hard
 )
+add_compile_options(${MCU_FLAGS})
 
 # --- Defines ---
 add_compile_definitions(
@@ -19,15 +20,26 @@ add_compile_definitions(
     USE_HAL_DRIVER
 )
 
+# --- fracanto submodule ---
+set(FRACANTO_HAL_BACKEND "stm32_fdcan" CACHE STRING "" FORCE)
+set(FRACANTO_DRV_PCM5102A ON CACHE BOOL "" FORCE)
+set(FRACANTO_DRV_SSD1306 OFF CACHE BOOL "" FORCE)
+set(FRACANTO_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(fracanto)
+
+# STM32 HAL headers für fracanto HAL-Backend
+target_include_directories(fracanto_hal_stm32_fdcan PRIVATE
+    Core/Inc
+    Drivers/STM32G4xx_HAL_Driver/Inc
+    Drivers/CMSIS/Device/ST/STM32G4xx/Include
+    Drivers/CMSIS/Include
+)
+
 # --- Sources ---
 set(SOURCES
     Core/Src/main.c
+    Core/Src/watasoge_module.c
     Core/Src/synthesis.c
-    Core/Src/karplus.c
-    Core/Src/output.c
-    Core/Src/input.c
-    Core/Src/player.c
-    Core/Src/player_config.c
     Core/Src/stm32g4xx_hal_msp.c
     Core/Src/stm32g4xx_it.c
     Core/Src/system_stm32g4xx.c
@@ -46,13 +58,11 @@ set(SOURCES
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash.c
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ex.c
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ramfunc.c
-    Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_exti.c
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma_ex.c
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_sai.c
     Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_sai_ex.c
-    Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c
-    Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c
+    Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_fdcan.c
 )
 
 # --- Include paths ---
@@ -69,7 +79,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDES})
 
 # --- Compiler flags ---
 target_compile_options(${PROJECT_NAME} PRIVATE
-    ${MCU_FLAGS}
     -Wall
     -fdata-sections
     -ffunction-sections
@@ -86,6 +95,13 @@ target_link_options(${PROJECT_NAME} PRIVATE
     -Wl,--gc-sections
     -Wl,-Map=${PROJECT_NAME}.map,--cref
     -lc -lm -lnosys
+)
+
+# --- fracanto link ---
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    fracanto_core
+    fracanto_hal_stm32_fdcan
+    fracanto_drv_pcm5102a
 )
 
 # --- Post-build: size, hex, bin ---

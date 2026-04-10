@@ -1,8 +1,6 @@
 /**
-  ******************************************************************************
   * @file    stm32g4xx_it.c
   * @brief   Interrupt Service Routines
-  ******************************************************************************
   */
 
 #include "main.h"
@@ -10,35 +8,14 @@
 
 extern DMA_HandleTypeDef hdma_sai1a;
 
-void NMI_Handler(void)
-{
-}
+extern FDCAN_HandleTypeDef hfdcan1;
 
-void HardFault_Handler(void)
-{
-    while (1)
-    {
-    }
-}
-
-void MemManage_Handler(void)
-{
-    while (1)
-    {
-    }
-}
-
-void SVC_Handler(void)
-{
-}
-
-void DebugMon_Handler(void)
-{
-}
-
-void PendSV_Handler(void)
-{
-}
+void NMI_Handler(void) {}
+void HardFault_Handler(void) { while (1) {} }
+void MemManage_Handler(void) { while (1) {} }
+void SVC_Handler(void) {}
+void DebugMon_Handler(void) {}
+void PendSV_Handler(void) {}
 
 void SysTick_Handler(void)
 {
@@ -50,7 +27,10 @@ void DMA1_Channel1_IRQHandler(void)
     HAL_DMA_IRQHandler(&hdma_sai1a);
 }
 
-void EXTI0_IRQHandler(void)
+volatile uint8_t fdcan_irq_fired = 0;
+
+void FDCAN1_IT0_IRQHandler(void)
 {
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+    fdcan_irq_fired = 1;
+    HAL_FDCAN_IRQHandler(&hfdcan1);
 }

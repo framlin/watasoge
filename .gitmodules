@@ -1,0 +1,3 @@
+[submodule "firmware/stm32g431kb/fracanto"]
+	path = firmware/stm32g431kb/fracanto
+	url = ssh://git@jupiter:2222/mbaaba/fracanto.git

@@ -3,30 +3,81 @@
 #include "wavetables_integrated.h"
 #include <math.h>
 
-/* --- Module state --- */
+/* --- ADSR envelope --- */
+typedef enum {
+    ADSR_IDLE,
+    ADSR_ATTACK,
+    ADSR_DECAY,
+    ADSR_SUSTAIN,
+    ADSR_RELEASE
+} adsr_state_t;
+
+static adsr_state_t adsr_state;
+static float attack_rate;
+static float decay_factor;
+static float sustain_level;
+static float release_rate;
+
+/* --- Wavetable playback state --- */
 static iwt_differentiator_t diff;
 static float phase;
 static float f0;
 static float scale;
 static float coeff;
 static const int16_t *wave;
-static uint8_t muted;
 static float gain;
-static float decay_rate;
 
-#define FADE_STEP  (1.0f / 256.0f)  /* ~5.8 ms fade at 44.1 kHz */
+/* --- ADSR parameter setters --- */
 
-void synthesis_set_mute(uint8_t mute) { muted = mute; }
-void synthesis_set_decay(float rate) { decay_rate = rate; }
+void synthesis_set_attack(float rate)
+{
+    if (rate < 0.0f) rate = 0.0f;
+    if (rate > 1.0f) rate = 1.0f;
+    attack_rate = rate;
+}
+
+void synthesis_set_decay(float factor)
+{
+    if (factor < 0.0f) factor = 0.0f;
+    if (factor > 1.0f) factor = 1.0f;
+    decay_factor = factor;
+}
+
+void synthesis_set_sustain(float level)
+{
+    if (level < 0.0f) level = 0.0f;
+    if (level > 1.0f) level = 1.0f;
+    sustain_level = level;
+}
+
+void synthesis_set_release(float rate)
+{
+    if (rate < 0.0f) rate = 0.0f;
+    if (rate > 1.0f) rate = 1.0f;
+    release_rate = rate;
+}
+
+/* --- Gate / Trigger --- */
+
+void synthesis_gate_on(void)
+{
+    adsr_state = ADSR_ATTACK;
+}
+
+void synthesis_gate_off(void)
+{
+    adsr_state = ADSR_RELEASE;
+}
 
 void synthesis_trigger(void)
 {
     diff.previous = (float)wave[0];
     diff.lp = 0.0f;
     phase = 0.0f;
-    gain = 1.0f;
-    muted = 0;
+    adsr_state = ADSR_ATTACK;
 }
+
+/* --- Init --- */
 
 void synthesis_init(void)
 {
@@ -35,7 +86,14 @@ void synthesis_init(void)
     diff.previous = (float)wave[0];
     diff.lp = 0.0f;
     phase = 0.0f;
-    gain = 1.0f;
+    gain = 0.0f;
+    adsr_state = ADSR_IDLE;
+
+    /* Defaults */
+    attack_rate = 1.0f;
+    decay_factor = 1.0f;
+    sustain_level = 0.7f;
+    release_rate = 1.0f;
 }
 
 void synthesis_set_frequency(float freq_hz)
@@ -58,19 +116,43 @@ void synthesis_fill_buffer(int16_t *buf, uint16_t num_samples)
 {
     for (uint16_t i = 0; i < num_samples; i += 2)
     {
-        /* Envelope: decay or sustain mode */
-        if (decay_rate > 0.0f) {
-            gain *= decay_rate;
-            if (gain < 0.001f) gain = 0.0f;
-        } else {
-            float target = muted ? 0.0f : 1.0f;
-            if (gain < target) {
-                gain += FADE_STEP;
-                if (gain > 1.0f) gain = 1.0f;
-            } else if (gain > target) {
-                gain -= FADE_STEP;
-                if (gain < 0.0f) gain = 0.0f;
+        /* ADSR envelope update */
+        switch (adsr_state) {
+        case ADSR_IDLE:
+            gain = 0.0f;
+            break;
+
+        case ADSR_ATTACK:
+            gain += attack_rate;
+            if (gain >= 1.0f) {
+                gain = 1.0f;
+                if (decay_factor >= 1.0f) {
+                    adsr_state = ADSR_SUSTAIN;
+                } else {
+                    adsr_state = ADSR_DECAY;
+                }
             }
+            break;
+
+        case ADSR_DECAY:
+            gain *= decay_factor;
+            if (gain <= sustain_level || gain < 0.001f) {
+                gain = sustain_level;
+                adsr_state = (sustain_level > 0.0f)
+                    ? ADSR_SUSTAIN : ADSR_IDLE;
+            }
+            break;
+
+        case ADSR_SUSTAIN:
+            break;
+
+        case ADSR_RELEASE:
+            gain -= release_rate;
+            if (gain <= 0.0f) {
+                gain = 0.0f;
+                adsr_state = ADSR_IDLE;
+            }
+            break;
         }
 
         /* Phase → table index + fraction */
@@ -84,12 +166,8 @@ void synthesis_fill_buffer(int16_t *buf, uint16_t num_samples)
         /* Differentiation + one-pole LP */
         float out = iwt_diff_process(&diff, coeff, s);
 
-        /* Envelope: smoothstep for sustain, raw gain for decay */
-        float g = (decay_rate > 0.0f) ? gain
-                : gain * gain * (3.0f - 2.0f * gain);
-
         /* Scale, apply gain envelope, convert to int16 */
-        float sample_f = out * scale * OUTPUT_GAIN * g;
+        float sample_f = out * scale * OUTPUT_GAIN * gain;
         if (sample_f > 32767.0f) sample_f = 32767.0f;
         if (sample_f < -32768.0f) sample_f = -32768.0f;
         int16_t sample = (int16_t)sample_f;
